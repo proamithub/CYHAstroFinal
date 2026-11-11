@@ -57,6 +57,10 @@ public static class InfrastructureServiceExtensions
             services.AddSingleton<ICacheService, RedisCacheService>();
         }
 
+        // --- Authentication & Security Services ---
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.ITokenService, CYHAstro.Infrastructure.Identity.TokenService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IAuthService, CYHAstro.Infrastructure.Identity.AuthService>();
+
         // --- Gemini AI Astrology Service ---
         services.Configure<CYHAstro.Core.Configuration.GeminiSettings>(
             configuration.GetSection(CYHAstro.Core.Configuration.GeminiSettings.SectionName));
