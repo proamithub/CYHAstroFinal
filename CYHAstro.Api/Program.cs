@@ -1,4 +1,4 @@
-﻿using CYHAstro.Api.Extensions;
+using CYHAstro.Api.Extensions;
 using CYHAstro.Api.Middleware;
 using CYHAstro.Infrastructure;
 using CYHAstro.Infrastructure.Identity;
@@ -104,8 +104,8 @@ try
 
     app.MapControllers();
 
-    // SignalR Hubs (registered in Phase 15)
-    // app.MapHub<ChatHub>("/hubs/chat");
+    // SignalR Real-Time Consultation Hub
+    app.MapHub<CYHAstro.Api.Hubs.ConsultationHub>("/hubs/consultation");
 
     app.Run();
 }

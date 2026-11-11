@@ -33,8 +33,8 @@ public sealed class AdminService : IAdminService
                     (SELECT COUNT(1) FROM dbo.Astrologers WHERE IsDeleted = 0 AND IsVerified = 0) AS PendingAstrologers,
                     (SELECT COUNT(1) FROM dbo.ConsultationSessions WHERE IsDeleted = 0) AS TotalConsultations,
                     (SELECT ISNULL(SUM(Amount), 0) FROM dbo.WalletTransactions WHERE TransactionType = 'CREDIT' AND ReferenceType = 'RECHARGE') AS TotalPlatformRevenue,
-                    (SELECT ISNULL(SUM(AstrologerEarnings), 0) FROM dbo.ConsultationSessions WHERE Status = 'COMPLETED') AS TotalAstrologerPayouts,
-                    (SELECT ISNULL(SUM(PlatformCommission), 0) FROM dbo.ConsultationSessions WHERE Status = 'COMPLETED') AS TotalPlatformCommission,
+                    (SELECT ISNULL(SUM(Amount), 0) FROM dbo.AstrologerEarnings) AS TotalAstrologerPayouts,
+                    (SELECT ISNULL(SUM(CommissionAmount), 0) FROM dbo.PlatformCommissions) AS TotalPlatformCommission,
                     (SELECT ISNULL(SUM(PaidBalance + BonusBalance), 0) FROM dbo.Wallets) AS TotalWalletLiability;
             ";
 
@@ -69,13 +69,15 @@ public sealed class AdminService : IAdminService
                     cs.SessionType,
                     cs.Status,
                     ISNULL(cs.DurationSeconds, 0) AS DurationSeconds,
-                    ISNULL(cs.TotalAmount, 0) AS TotalAmount,
-                    ISNULL(cs.PlatformCommission, 0) AS PlatformCommission,
-                    ISNULL(cs.AstrologerEarnings, 0) AS AstrologerEarnings,
+                    ISNULL(cs.TotalCharge, 0) AS TotalAmount,
+                    ISNULL(pc.CommissionAmount, 0) AS PlatformCommission,
+                    ISNULL(ae.Amount, 0) AS AstrologerEarnings,
                     cs.CreatedAt
                 FROM dbo.ConsultationSessions cs
                 LEFT JOIN dbo.UserProfiles u ON cs.UserId = u.Id
                 LEFT JOIN dbo.Astrologers a ON cs.AstrologerId = a.Id
+                LEFT JOIN dbo.PlatformCommissions pc ON cs.Id = pc.SessionId
+                LEFT JOIN dbo.AstrologerEarnings ae ON cs.Id = ae.SessionId
                 ORDER BY cs.CreatedAt DESC;
             ";
 

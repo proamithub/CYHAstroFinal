@@ -71,12 +71,21 @@ public static class InfrastructureServiceExtensions
             configuration.GetSection(CYHAstro.Core.Configuration.GeminiSettings.SectionName));
         services.AddHttpClient<CYHAstro.Core.Interfaces.Services.IAiAstrologyService, CYHAstro.Infrastructure.Astrology.GeminiAiAstrologyService>();
 
+        // --- LiveKit WebRTC Token Service ---
+        services.Configure<CYHAstro.Core.Configuration.LiveKitSettings>(
+            configuration.GetSection(CYHAstro.Core.Configuration.LiveKitSettings.SectionName));
+        services.AddSingleton<CYHAstro.Core.Interfaces.Services.ILiveKitTokenService, CYHAstro.Infrastructure.LiveKit.LiveKitTokenService>();
+
         // --- Core Application Services ---
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IProfileService, CYHAstro.Infrastructure.Services.ProfileService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologerService, CYHAstro.Infrastructure.Services.AstrologerService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IWalletService, CYHAstro.Infrastructure.Services.WalletService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologyCalculationService, CYHAstro.Infrastructure.Services.AstrologyCalculationService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAdminService, CYHAstro.Infrastructure.Services.AdminService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IConsultationService, CYHAstro.Infrastructure.Services.ConsultationService>();
+
+        // --- Background Billing Engine ---
+        services.AddHostedService<CYHAstro.Infrastructure.BackgroundJobs.ConsultationBillingBackgroundService>();
 
         return services;
     }
