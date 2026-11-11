@@ -76,6 +76,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologerService, CYHAstro.Infrastructure.Services.AstrologerService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IWalletService, CYHAstro.Infrastructure.Services.WalletService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologyCalculationService, CYHAstro.Infrastructure.Services.AstrologyCalculationService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IAdminService, CYHAstro.Infrastructure.Services.AdminService>();
 
         return services;
     }

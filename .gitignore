@@ -1,4 +1,4 @@
-﻿## CYHAstro — .gitignore
+## CYHAstro — .gitignore
 ## IMPORTANT: Never commit secrets to source control
 
 # Build output
@@ -17,7 +17,7 @@ out/
 *.nupkg
 *.snupkg
 .nuget/
-packages/
+/packages/
 project.lock.json
 project.fragment.lock.json
 artifacts/

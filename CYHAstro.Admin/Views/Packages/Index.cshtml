@@ -1,0 +1,211 @@
+@model IReadOnlyList<CYHAstro.Core.DTOs.Admin.AdminRechargePackageDto>
+@{
+    ViewData["Title"] = "Recharge Packages";
+}
+
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="text-white fw-bold mb-1">Wallet Recharge Packages</h3>
+            <p class="text-secondary small mb-0">Manage customer top-up packages, promotional bonus credits, and popularity badges.</p>
+        </div>
+        <button type="button" class="btn btn-gold btn-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#packageModal" onclick="openCreateModal()">
+            <i class="fa-solid fa-plus-circle"></i> Create New Package
+        </button>
+    </div>
+
+    <!-- Packages Table -->
+    <div class="card admin-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-admin mb-0">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Package Name</th>
+                        <th>Recharge Amount</th>
+                        <th>Bonus %</th>
+                        <th>Bonus Credited</th>
+                        <th>Effective Total</th>
+                        <th>Popular Tag</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var pkg in Model)
+                        {
+                            var totalAmount = pkg.Amount + pkg.BonusAmount;
+                            <tr>
+                                <td class="text-secondary fw-mono">@pkg.DisplayOrder</td>
+                                <td>
+                                    <span class="text-white fw-bold">@pkg.Name</span>
+                                    <span class="d-block text-secondary small">ID: #@pkg.Id</span>
+                                </td>
+                                <td class="fw-bold text-white fs-6">
+                                    ₹@pkg.Amount.ToString("N2")
+                                </td>
+                                <td>
+                                    @if (pkg.BonusPercentage > 0)
+                                    {
+                                        <span class="badge bg-warning text-dark fw-bold">+@pkg.BonusPercentage.ToString("F0")%</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary small">None</span>
+                                    }
+                                </td>
+                                <td class="text-success fw-medium">
+                                    +₹@pkg.BonusAmount.ToString("N2")
+                                </td>
+                                <td class="text-warning fw-bold">
+                                    ₹@totalAmount.ToString("N2")
+                                </td>
+                                <td>
+                                    @if (pkg.IsPopular)
+                                    {
+                                        <span class="badge bg-danger"><i class="fa-solid fa-fire me-1"></i> Popular</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary small">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (pkg.IsActive)
+                                    {
+                                        <span class="badge bg-success bg-opacity-25 text-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Disabled</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-sm btn-outline-gold"
+                                                onclick="openEditModal(@pkg.Id, '@pkg.Name', @pkg.Amount, @pkg.BonusPercentage, @pkg.BonusAmount, @(pkg.IsPopular ? "true" : "false"), @pkg.DisplayOrder, @(pkg.IsActive ? "true" : "false"))">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+
+                                        <form asp-action="Toggle" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@pkg.Id" />
+                                            <input type="hidden" name="isActive" value="@(pkg.IsActive ? "false" : "true")" />
+                                            <button type="submit" class="btn btn-sm @(pkg.IsActive ? "btn-outline-danger" : "btn-outline-success")"
+                                                    title="@(pkg.IsActive ? "Disable Package" : "Enable Package")">
+                                                <i class="fa-solid @(pkg.IsActive ? "fa-eye-slash" : "fa-eye")"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-secondary py-5">
+                                No recharge packages configured yet.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create / Edit Package -->
+<div class="modal fade modal-admin" id="packageModal" tabindex="-1" aria-labelledby="packageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title text-warning fw-bold" id="packageModalLabel">Configure Package</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="Save" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="pkgId" name="Id" value="0" />
+
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-light fw-medium">Package Display Name <span class="text-danger">*</span></label>
+                            <input type="text" id="pkgName" name="Name" class="form-control bg-black text-light border-secondary" placeholder="e.g. Starter Cosmic Boost" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-light fw-medium">Recharge Amount (₹) <span class="text-danger">*</span></label>
+                            <input type="number" step="1" id="pkgAmount" name="Amount" class="form-control bg-black text-light border-secondary" placeholder="500" required min="10" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-light fw-medium">Bonus Percentage (%)</label>
+                            <input type="number" step="0.5" id="pkgBonusPct" name="BonusPercentage" class="form-control bg-black text-light border-secondary" placeholder="10" min="0" max="100" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-light fw-medium">Fixed Bonus (₹) <small class="text-secondary">(Optional)</small></label>
+                            <input type="number" step="1" id="pkgBonusAmt" name="BonusAmount" class="form-control bg-black text-light border-secondary" placeholder="0" min="0" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-light fw-medium">Display Sort Order</label>
+                            <input type="number" id="pkgOrder" name="DisplayOrder" class="form-control bg-black text-light border-secondary" value="1" min="1" />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="pkgPopular" name="IsPopular" value="true" />
+                                <label class="form-check-label text-light" for="pkgPopular">
+                                    Highlight as "Most Popular" / Recommended badge
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="pkgActive" name="IsActive" value="true" checked />
+                                <label class="form-check-label text-light" for="pkgActive">
+                                    Active for public checkout
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gold px-4 fw-bold">Save Package</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openCreateModal() {
+            document.getElementById("packageModalLabel").innerText = "Create New Recharge Package";
+            document.getElementById("pkgId").value = "0";
+            document.getElementById("pkgName").value = "";
+            document.getElementById("pkgAmount").value = "";
+            document.getElementById("pkgBonusPct").value = "0";
+            document.getElementById("pkgBonusAmt").value = "0";
+            document.getElementById("pkgOrder").value = "1";
+            document.getElementById("pkgPopular").checked = false;
+            document.getElementById("pkgActive").checked = true;
+        }
+
+        function openEditModal(id, name, amount, bonusPct, bonusAmt, isPopular, order, isActive) {
+            document.getElementById("packageModalLabel").innerText = "Edit Recharge Package #" + id;
+            document.getElementById("pkgId").value = id;
+            document.getElementById("pkgName").value = name;
+            document.getElementById("pkgAmount").value = amount;
+            document.getElementById("pkgBonusPct").value = bonusPct;
+            document.getElementById("pkgBonusAmt").value = bonusAmt;
+            document.getElementById("pkgOrder").value = order;
+            document.getElementById("pkgPopular").checked = isPopular;
+            document.getElementById("pkgActive").checked = isActive;
+
+            const modal = new bootstrap.Modal(document.getElementById('packageModal'));
+            modal.show();
+        }
+    </script>
+}

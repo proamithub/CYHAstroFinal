@@ -1,8 +1,216 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model CYHAstro.Core.DTOs.Admin.AdminDashboardDto
+@{
+    ViewData["Title"] = "Executive Overview";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container-fluid px-0">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="text-white fw-bold mb-1">Executive Dashboard</h3>
+            <p class="text-secondary small mb-0">Real-time monetary velocity, consultation activity, and Vedic astrologer operations.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Astrologers" asp-action="Index" class="btn btn-outline-gold btn-sm">
+                <i class="fa-solid fa-user-check me-1"></i> Astrologer Approvals
+            </a>
+            <a asp-controller="Packages" asp-action="Index" class="btn btn-gold btn-sm">
+                <i class="fa-solid fa-plus me-1"></i> Add Package
+            </a>
+        </div>
+    </div>
+
+    <!-- Stat Counters Grid -->
+    <div class="row g-3 mb-4">
+        <!-- Revenue Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Platform Gross Revenue</div>
+                        <div class="stat-value text-warning">₹@Model.TotalPlatformRevenue.ToString("N2")</div>
+                        <div class="text-secondary small mt-1">
+                            <i class="fa-solid fa-arrow-trend-up text-success me-1"></i> Cumulative Wallet Inflow
+                        </div>
+                    </div>
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                        <i class="fa-solid fa-indian-rupee-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commission Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Platform Commission</div>
+                        <div class="stat-value text-success">₹@Model.TotalPlatformCommission.ToString("N2")</div>
+                        <div class="text-secondary small mt-1">
+                            Astrologer Net: ₹@Model.TotalAstrologerPayouts.ToString("N2")
+                        </div>
+                    </div>
+                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consultations Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Total Consultations</div>
+                        <div class="stat-value text-info">@Model.TotalConsultations</div>
+                        <div class="text-secondary small mt-1">
+                            LiveKit WebRTC & Chat
+                        </div>
+                    </div>
+                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Astrologers Card -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">Astrologers (Active / Total)</div>
+                        <div class="stat-value text-white">@Model.ActiveAstrologers <span class="fs-5 text-secondary">/ @Model.TotalAstrologers</span></div>
+                        <div class="text-secondary small mt-1">
+                            <span class="text-warning">@Model.PendingAstrologers Pending Verification</span>
+                        </div>
+                    </div>
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Row -->
+    <div class="row g-4">
+        <!-- Recent Financial Ledger -->
+        <div class="col-lg-7">
+            <div class="card admin-card h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25">
+                    <h6 class="text-white fw-bold mb-0">
+                        <i class="fa-solid fa-receipt text-warning me-2"></i> Recent Financial Transactions
+                    </h6>
+                    <a asp-controller="Transactions" asp-action="Index" class="btn btn-outline-secondary btn-sm py-1 px-2 small">
+                        View All <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-admin mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Ref</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentTransactions != null && Model.RecentTransactions.Any())
+                            {
+                                @foreach (var tx in Model.RecentTransactions)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="text-white fw-medium">@tx.UserDisplayName</span>
+                                            <span class="d-block text-secondary small">ID: #@tx.UserId</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(tx.TransactionType == "CREDIT" ? "bg-success" : tx.TransactionType == "DEBIT" ? "bg-danger" : "bg-info")">
+                                                @tx.TransactionType
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold @(tx.TransactionType == "CREDIT" ? "text-success" : "text-danger")">
+                                            @(tx.TransactionType == "CREDIT" ? "+" : "-")₹@tx.Amount.ToString("N2")
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">@tx.ReferenceType</span>
+                                        </td>
+                                        <td class="text-secondary small">
+                                            @tx.CreatedAt.ToString("dd MMM, hh:mm tt")
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-secondary py-4">No recent transactions recorded.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Consultations -->
+        <div class="col-lg-5">
+            <div class="card admin-card h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center p-3 border-bottom border-secondary border-opacity-25">
+                    <h6 class="text-white fw-bold mb-0">
+                        <i class="fa-solid fa-comments text-info me-2"></i> Recent Consultations
+                    </h6>
+                    <span class="badge bg-info text-dark">Live WebRTC</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-admin mb-0">
+                        <thead>
+                            <tr>
+                                <th>Astrologer</th>
+                                <th>Type</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentConsultations != null && Model.RecentConsultations.Any())
+                            {
+                                @foreach (var c in Model.RecentConsultations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="text-white fw-medium">@c.AstrologerName</span>
+                                            <span class="d-block text-secondary small">Seeker: @c.UserName</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-dark border border-secondary text-light">@c.SessionType</span>
+                                        </td>
+                                        <td class="fw-bold text-warning">
+                                            ₹@c.TotalAmount.ToString("N2")
+                                        </td>
+                                        <td>
+                                            <span class="badge @(c.Status == "COMPLETED" ? "bg-success" : c.Status == "IN_PROGRESS" ? "bg-warning text-dark" : "bg-secondary")">
+                                                @c.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-secondary py-4">No recent consultations recorded.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
