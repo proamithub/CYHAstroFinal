@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="CYHAstro.Admin/CYHAstro.Admin.csproj" />
+  <Project Path="CYHAstro.Api/CYHAstro.Api.csproj" />
+  <Project Path="CYHAstro.Client/CYHAstro.Client.csproj" />
+  <Project Path="CYHAstro.Core/CYHAstro.Core.csproj" />
+  <Project Path="CYHAstro.Infrastructure/CYHAstro.Infrastructure.csproj" />
+  <Project Path="CYHAstro.Mobile/CYHAstro.Mobile.csproj" />
+  <Project Path="CYHAstro.Tests/CYHAstro.Tests.csproj" />
+</Solution>

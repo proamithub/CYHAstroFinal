@@ -1,9 +1,0 @@
-<Solution>
-  <Project Path="CynAstro.Admin/CynAstro.Admin.csproj" />
-  <Project Path="CynAstro.Api/CynAstro.Api.csproj" />
-  <Project Path="CynAstro.Client/CynAstro.Client.csproj" />
-  <Project Path="CynAstro.Core/CynAstro.Core.csproj" />
-  <Project Path="CynAstro.Infrastructure/CynAstro.Infrastructure.csproj" />
-  <Project Path="CynAstro.Mobile/CynAstro.Mobile.csproj" />
-  <Project Path="CynAstro.Tests/CynAstro.Tests.csproj" />
-</Solution>
