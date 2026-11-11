@@ -1,8 +1,271 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model CYHAstro.Client.Models.HomeIndexViewModel
+@{
+    ViewData["Title"] = "India's Most Trusted Vedic Astrology Platform";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!-- Hero Section -->
+<section class="hero-gradient">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7 text-center text-lg-start">
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-dark border border-warning border-opacity-25 text-warning small mb-3">
+                    <i class="fa-solid fa-sparkles"></i> Grounded Vedic Science & AI Predictive Precision
+                </div>
+                <h1 class="display-4 fw-extrabold text-white mb-3 brand-font">
+                    Unlock Your Celestial Destiny with <span class="text-warning">Vedic Masters</span>
+                </h1>
+                <p class="lead text-secondary mb-4">
+                    Connect instantly with India's top verified astrologers for career clarity, relationship reconciliation, financial growth, and personalized Vedic remedies.
+                </p>
+                <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
+                    <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold btn-lg px-4 py-3 shadow">
+                        <i class="fa-solid fa-comments me-2"></i> Consult Astrologer Now
+                    </a>
+                    <a asp-controller="Kundli" asp-action="Index" class="btn btn-outline-gold btn-lg px-4 py-3">
+                        <i class="fa-solid fa-chart-pie me-2"></i> Free Janam Kundli
+                    </a>
+                </div>
+            </div>
+
+            <!-- Hero Floating Horoscope Card -->
+            <div class="col-lg-5">
+                <div class="cosmic-card p-4 border-warning border-opacity-50">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-3 text-warning"><i class="fa-solid fa-star-and-crescent"></i></span>
+                            <div>
+                                <h5 class="fw-bold text-white mb-0">Daily Planetary Pulse</h5>
+                                <span class="text-secondary small">Vedic Forecast & AI Synthesis</span>
+                            </div>
+                        </div>
+                        <span class="badge bg-warning text-dark fw-bold px-2 py-1">TODAY</span>
+                    </div>
+
+                    @if (Model.FeaturedHoroscope != null)
+                    {
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-50 mb-3">
+                            <div class="d-flex justify-content-between text-warning fw-semibold small mb-1">
+                                <span>@Model.FeaturedHoroscope.ZodiacSignName (@Model.FeaturedHoroscope.SanskritName)</span>
+                                <span>Day Score: @Model.FeaturedHoroscope.RatingPercentage%</span>
+                            </div>
+                            <p class="text-light small mb-2">
+                                @Model.FeaturedHoroscope.GeneralText
+                            </p>
+                            <div class="d-flex gap-3 small text-secondary">
+                                <span><i class="fa-solid fa-gem text-warning me-1"></i> Lucky No: <strong>@Model.FeaturedHoroscope.LuckyNumber</strong></span>
+                                <span><i class="fa-solid fa-palette text-info me-1"></i> Color: <strong>@Model.FeaturedHoroscope.LuckyColor</strong></span>
+                            </div>
+                        </div>
+                    }
+
+                    <a asp-controller="Horoscope" asp-action="Index" class="btn btn-outline-gold w-100 py-2 small">
+                        View All 12 Signs Horoscope <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Banner -->
+<section class="border-top border-bottom border-warning border-opacity-10 bg-dark py-4">
+    <div class="container">
+        <div class="row text-center g-4">
+            <div class="col-6 col-md-3">
+                <h3 class="fw-bold text-warning mb-0">50,000+</h3>
+                <span class="text-secondary small">Consultations Completed</span>
+            </div>
+            <div class="col-6 col-md-3">
+                <h3 class="fw-bold text-warning mb-0">4.96 <i class="fa-solid fa-star fs-5"></i></h3>
+                <span class="text-secondary small">Average Seeker Rating</span>
+            </div>
+            <div class="col-6 col-md-3">
+                <h3 class="fw-bold text-warning mb-0">100%</h3>
+                <span class="text-secondary small">Verified Vedic Astrologers</span>
+            </div>
+            <div class="col-6 col-md-3">
+                <h3 class="fw-bold text-warning mb-0">24 / 7</h3>
+                <span class="text-secondary small">Private Instant Connect</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Zodiac Signs Bar -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-white brand-font">Explore Your Zodiac Sign</h3>
+            <p class="text-secondary small">Select your Rashi to read daily celestial predictions grounded in real planetary transits</p>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            @{
+                var signs = new[]
+                {
+                    (1, "Aries", "Mesha", "fa-solid fa-fire text-danger"),
+                    (2, "Taurus", "Vrishabha", "fa-solid fa-mountain text-success"),
+                    (3, "Gemini", "Mithuna", "fa-solid fa-wind text-warning"),
+                    (4, "Cancer", "Karka", "fa-solid fa-water text-info"),
+                    (5, "Leo", "Simha", "fa-solid fa-sun text-warning"),
+                    (6, "Virgo", "Kanya", "fa-solid fa-seedling text-success"),
+                    (7, "Libra", "Tula", "fa-solid fa-scale-balanced text-primary"),
+                    (8, "Scorpio", "Vrishchika", "fa-solid fa-shield text-danger"),
+                    (9, "Sagittarius", "Dhanu", "fa-solid fa-arrow-trend-up text-warning"),
+                    (10, "Capricorn", "Makara", "fa-solid fa-landmark text-secondary"),
+                    (11, "Aquarius", "Kumbha", "fa-solid fa-bolt text-info"),
+                    (12, "Pisces", "Meena", "fa-solid fa-fish text-primary")
+                };
+            }
+
+            @foreach (var sign in signs)
+            {
+                <a href="/Horoscope?sign=@sign.Item1" class="zodiac-badge text-center">
+                    <i class="@sign.Item4 fs-4 mb-1"></i>
+                    <span class="fw-bold small">@sign.Item2</span>
+                    <span class="text-secondary" style="font-size: 0.65rem;">@sign.Item3</span>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Top Rated Astrologers Section -->
+<section class="py-5 bg-dark bg-opacity-50">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <span class="text-warning small fw-bold text-uppercase letter-spacing-1">Expert Guidance</span>
+                <h3 class="fw-bold text-white brand-font mb-0">Talk to India's Top Astrologers</h3>
+            </div>
+            <a asp-controller="Astrologer" asp-action="Index" class="btn btn-outline-gold btn-sm px-3">
+                View All Astrologers <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="row g-4">
+            @if (Model.TopAstrologers.Any())
+            {
+                @foreach (var astro in Model.TopAstrologers)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="cosmic-card p-4 h-100 d-flex flex-column">
+                            <div class="d-flex align-items-start gap-3 mb-3">
+                                <img src="@(string.IsNullOrEmpty(astro.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200" : astro.ProfilePhotoUrl)"
+                                     alt="@astro.DisplayName" class="astro-avatar" />
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="fw-bold text-white mb-0">@astro.DisplayName</h6>
+                                        <span class="badge-online"><i class="fa-solid fa-circle me-1" style="font-size: 6px;"></i> Online</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1 my-1">
+                                        <i class="fa-solid fa-star gold-star small"></i>
+                                        <span class="fw-bold text-warning small">@astro.Rating.ToString("F2")</span>
+                                        <span class="text-secondary small">(@astro.TotalReviews reviews)</span>
+                                    </div>
+                                    <span class="text-secondary small d-block">
+                                        <i class="fa-solid fa-briefcase me-1 text-warning"></i> @astro.ExperienceYears yrs experience
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Specialties Tags -->
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                @foreach (var spec in astro.Specializations.Take(3))
+                                {
+                                    <span class="badge bg-dark border border-secondary text-secondary small" style="font-size: 0.7rem;">@spec</span>
+                                }
+                            </div>
+
+                            <p class="text-secondary small line-clamp-2 mb-3 flex-grow-1">
+                                @(astro.Bio ?? "Experienced Vedic scholar offering profound astrological insights and tailored planetary remedies.")
+                            </p>
+
+                            <!-- Pricing & Action Buttons -->
+                            <div class="pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="text-secondary" style="font-size: 0.75rem;">Chat Rate</span>
+                                    <h6 class="text-warning fw-bold mb-0">₹@astro.ChatRatePerMinute<span class="text-secondary fw-normal small">/min</span></h6>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <a href="/Astrologer/Detail/@astro.PublicId" class="btn btn-outline-gold btn-sm px-3">
+                                        Profile
+                                    </a>
+                                    <a href="/Astrologer/Detail/@astro.PublicId?action=chat" class="btn btn-gold btn-sm px-3">
+                                        <i class="fa-solid fa-comment-dots me-1"></i> Chat
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12 text-center py-4">
+                    <p class="text-secondary">Astrologers are loading. Please check back shortly.</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Quick Kundli Free Tool Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="cosmic-card p-4 p-lg-5 border-warning border-opacity-30">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <span class="badge bg-warning text-dark fw-bold mb-2">100% FREE</span>
+                    <h3 class="fw-bold text-white brand-font mb-3">Generate Your Precision Vedic Kundli</h3>
+                    <p class="text-secondary mb-4">
+                        Instant planetary longitudes, Lagna chart, Vimshottari Dasha, and Mangal Dosha evaluation backed by Google Gemini AI deep synthesis.
+                    </p>
+                    <ul class="list-unstyled small text-secondary d-flex flex-column gap-2 mb-0">
+                        <li><i class="fa-solid fa-check text-warning me-2"></i> Real-time Lahiri Ayanamsha planetary calculation</li>
+                        <li><i class="fa-solid fa-check text-warning me-2"></i> Comprehensive 12 Bhavas (Houses) breakdown</li>
+                        <li><i class="fa-solid fa-check text-warning me-2"></i> AI-grounded career, health & marital insights</li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-6">
+                    <form asp-controller="Kundli" asp-action="Generate" method="post" class="p-3 rounded bg-dark border border-secondary border-opacity-50">
+                        @Html.AntiForgeryToken()
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label small text-secondary">Full Name</label>
+                                <input type="text" name="Name" class="form-control form-control-cosmic form-control-sm" placeholder="Enter name" required />
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small text-secondary">Gender</label>
+                                <select name="Gender" class="form-control form-control-cosmic form-control-sm">
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                    <option value="O">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Date of Birth</label>
+                                <input type="date" name="DateOfBirth" class="form-control form-control-cosmic form-control-sm" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-secondary">Time of Birth</label>
+                                <input type="time" name="TimeOfBirth" class="form-control form-control-cosmic form-control-sm" required />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small text-secondary">Birth City</label>
+                                <input type="text" name="BirthPlace" class="form-control form-control-cosmic form-control-sm" placeholder="e.g. New Delhi, India" required />
+                            </div>
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-gold w-100 py-2">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Kundli Now
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
