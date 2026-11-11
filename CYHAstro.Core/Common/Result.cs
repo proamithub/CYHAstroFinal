@@ -1,4 +1,4 @@
-﻿namespace CYHAstro.Core.Common;
+namespace CYHAstro.Core.Common;
 
 /// <summary>
 /// Discriminated union result type for service operations.
@@ -33,6 +33,9 @@ public sealed class Result
     public static Result Success() => new();
     public static Result Failure(string error, string? errorCode = null) => new(error, errorCode);
 
+    public TOut Match<TOut>(Func<TOut> onSuccess, Func<string, TOut> onFailure)
+        => IsSuccess ? onSuccess() : onFailure(Error!);
+
     public static class ErrorCodes
     {
         public const string NotFound = "NOT_FOUND";
@@ -45,5 +48,7 @@ public sealed class Result
         public const string SessionExpired = "SESSION_EXPIRED";
         public const string PaymentFailed = "PAYMENT_FAILED";
         public const string DuplicateRequest = "DUPLICATE_REQUEST";
+        public const string DatabaseError = "DATABASE_ERROR";
+        public const string InternalError = "INTERNAL_ERROR";
     }
 }

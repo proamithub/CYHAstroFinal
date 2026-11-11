@@ -57,6 +57,11 @@ public static class InfrastructureServiceExtensions
             services.AddSingleton<ICacheService, RedisCacheService>();
         }
 
+        // --- Dapper Repositories ---
+        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IAstrologerRepository, CYHAstro.Infrastructure.Data.Repositories.AstrologerRepository>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IBirthProfileRepository, CYHAstro.Infrastructure.Data.Repositories.BirthProfileRepository>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IWalletRepository, CYHAstro.Infrastructure.Data.Repositories.WalletRepository>();
+
         // --- Authentication & Security Services ---
         services.AddScoped<CYHAstro.Core.Interfaces.Services.ITokenService, CYHAstro.Infrastructure.Identity.TokenService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAuthService, CYHAstro.Infrastructure.Identity.AuthService>();
@@ -65,6 +70,12 @@ public static class InfrastructureServiceExtensions
         services.Configure<CYHAstro.Core.Configuration.GeminiSettings>(
             configuration.GetSection(CYHAstro.Core.Configuration.GeminiSettings.SectionName));
         services.AddHttpClient<CYHAstro.Core.Interfaces.Services.IAiAstrologyService, CYHAstro.Infrastructure.Astrology.GeminiAiAstrologyService>();
+
+        // --- Core Application Services ---
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IProfileService, CYHAstro.Infrastructure.Services.ProfileService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologerService, CYHAstro.Infrastructure.Services.AstrologerService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IWalletService, CYHAstro.Infrastructure.Services.WalletService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologyCalculationService, CYHAstro.Infrastructure.Services.AstrologyCalculationService>();
 
         return services;
     }
