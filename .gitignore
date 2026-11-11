@@ -1,0 +1,81 @@
+## CynAstro — .gitignore
+## IMPORTANT: Never commit secrets to source control
+
+# Build output
+bin/
+obj/
+out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# User secrets (NEVER commit)
+secrets.json
+appsettings.secrets.json
+appsettings.Local.json
+
+# Environment files (NEVER commit)
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# IDE
+.idea/
+*.DotSettings.user
+.rider/
+
+# .NET MAUI
+**/bin/Debug/
+**/bin/Release/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# k6 results
+k6-results/
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+
+# SQL connection strings — always use env vars in prod
+# (appsettings.Development.json is committed for local dev convenience ONLY
+#  with localhost connection strings — NEVER prod credentials)
