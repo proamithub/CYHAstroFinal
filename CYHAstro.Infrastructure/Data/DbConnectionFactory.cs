@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Data;
 
@@ -16,8 +16,7 @@ public sealed class DbConnectionFactory : IDbConnectionFactory
     public DbConnectionFactory(IConfiguration configuration)
     {
         _connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? configuration.GetConnectionString("CYHAstroDB")
-            ?? throw new InvalidOperationException("Database connection string ('DefaultConnection' or 'CYHAstroDB') is not configured.");
+            ?? throw new InvalidOperationException("Database connection string 'DefaultConnection' is not configured.");
     }
 
     public IDbConnection CreateConnection()

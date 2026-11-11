@@ -1,4 +1,4 @@
-﻿using CYHAstro.Core.Interfaces.Repositories;
+using CYHAstro.Core.Interfaces.Repositories;
 using CYHAstro.Infrastructure.Cache;
 using CYHAstro.Infrastructure.Data;
 using CYHAstro.Infrastructure.Identity;
@@ -24,8 +24,7 @@ public static class InfrastructureServiceExtensions
 
         // --- Identity DbContext (EF Core — only for ASP.NET Identity) ---
         var connStr = configuration.GetConnectionString("DefaultConnection")
-            ?? configuration.GetConnectionString("CYHAstroDB")
-            ?? throw new InvalidOperationException("Connection string ('DefaultConnection' or 'CYHAstroDB') is required.");
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is required.");
 
         services.AddDbContext<CYHAstroIdentityDbContext>(options =>
             options.UseSqlServer(connStr, sql =>
