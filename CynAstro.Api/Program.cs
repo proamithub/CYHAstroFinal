@@ -16,6 +16,9 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // Support Local Secrets Configuration (never committed to git)
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
     // ── Serilog ──────────────────────────────
     builder.Host.UseSerilog((ctx, lc) => lc
         .ReadFrom.Configuration(ctx.Configuration)

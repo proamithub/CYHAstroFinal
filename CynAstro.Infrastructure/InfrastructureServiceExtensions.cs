@@ -23,8 +23,9 @@ public static class InfrastructureServiceExtensions
         services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 
         // --- Identity DbContext (EF Core — only for ASP.NET Identity) ---
-        var connStr = configuration.GetConnectionString("CynAstroDB")
-            ?? throw new InvalidOperationException("Connection string 'CynAstroDB' is required.");
+        var connStr = configuration.GetConnectionString("DefaultConnection")
+            ?? configuration.GetConnectionString("CynAstroDB")
+            ?? throw new InvalidOperationException("Connection string ('DefaultConnection' or 'CynAstroDB') is required.");
 
         services.AddDbContext<CynAstroIdentityDbContext>(options =>
             options.UseSqlServer(connStr, sql =>
@@ -56,6 +57,11 @@ public static class InfrastructureServiceExtensions
             services.AddDistributedMemoryCache();
             services.AddSingleton<ICacheService, RedisCacheService>();
         }
+
+        // --- Gemini AI Astrology Service ---
+        services.Configure<CynAstro.Core.Configuration.GeminiSettings>(
+            configuration.GetSection(CynAstro.Core.Configuration.GeminiSettings.SectionName));
+        services.AddHttpClient<CynAstro.Core.Interfaces.Services.IAiAstrologyService, CynAstro.Infrastructure.Astrology.GeminiAiAstrologyService>();
 
         return services;
     }

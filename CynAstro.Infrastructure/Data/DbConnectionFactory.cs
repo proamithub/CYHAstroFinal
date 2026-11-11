@@ -15,8 +15,9 @@ public sealed class DbConnectionFactory : IDbConnectionFactory
 
     public DbConnectionFactory(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("CynAstroDB")
-            ?? throw new InvalidOperationException("Database connection string 'CynAstroDB' is not configured.");
+        _connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? configuration.GetConnectionString("CynAstroDB")
+            ?? throw new InvalidOperationException("Database connection string ('DefaultConnection' or 'CynAstroDB') is not configured.");
     }
 
     public IDbConnection CreateConnection()
