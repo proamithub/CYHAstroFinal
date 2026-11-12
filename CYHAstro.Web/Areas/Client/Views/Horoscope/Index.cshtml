@@ -1,0 +1,145 @@
+@model CYHAstro.Core.DTOs.Astrology.DailyHoroscopeDto
+@{
+    ViewData["Title"] = $"{Model?.ZodiacSignName ?? "Daily"} Horoscope - Free Vedic Daily Predictions";
+    int currentSign = ViewBag.CurrentSign != null ? (int)ViewBag.CurrentSign : 1;
+
+    var signs = new[]
+    {
+        (1, "Aries", "Mesha", "Mar 21 - Apr 19", "fa-solid fa-fire text-danger"),
+        (2, "Taurus", "Vrishabha", "Apr 20 - May 20", "fa-solid fa-mountain text-success"),
+        (3, "Gemini", "Mithuna", "May 21 - Jun 20", "fa-solid fa-wind text-warning"),
+        (4, "Cancer", "Karka", "Jun 21 - Jul 22", "fa-solid fa-water text-info"),
+        (5, "Leo", "Simha", "Jul 23 - Aug 22", "fa-solid fa-sun text-warning"),
+        (6, "Virgo", "Kanya", "Aug 23 - Sep 22", "fa-solid fa-seedling text-success"),
+        (7, "Libra", "Tula", "Sep 23 - Oct 22", "fa-solid fa-scale-balanced text-primary"),
+        (8, "Scorpio", "Vrishchika", "Oct 23 - Nov 21", "fa-solid fa-shield text-danger"),
+        (9, "Sagittarius", "Dhanu", "Nov 22 - Dec 21", "fa-solid fa-arrow-trend-up text-warning"),
+        (10, "Capricorn", "Makara", "Dec 22 - Jan 19", "fa-solid fa-landmark text-secondary"),
+        (11, "Aquarius", "Kumbha", "Jan 20 - Feb 18", "fa-solid fa-bolt text-info"),
+        (12, "Pisces", "Meena", "Feb 19 - Mar 20", "fa-solid fa-fish text-primary")
+    };
+}
+
+<div class="container py-4">
+    <!-- Title -->
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-white brand-font">Vedic Daily Horoscope</h2>
+        <p class="text-secondary small">Precision planetary transit interpretations grounded in ancient Jyotish and enhanced with Google Gemini AI</p>
+    </div>
+
+    <!-- 12 Signs Selector Pills -->
+    <div class="d-flex flex-wrap justify-content-center gap-2 mb-5">
+        @foreach (var s in signs)
+        {
+            <a href="@Url.Action("Index", new { sign = s.Item1 })"
+               class="zodiac-badge @(s.Item1 == currentSign ? "active" : "")">
+                <i class="@s.Item5 fs-4 mb-1"></i>
+                <span class="fw-bold small">@s.Item2</span>
+                <span class="text-secondary" style="font-size: 0.65rem;">@s.Item3</span>
+            </a>
+        }
+    </div>
+
+    @if (Model != null)
+    {
+        <!-- Horoscope Card -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="cosmic-card p-4 p-md-5 border-warning border-opacity-40">
+                    <!-- Header -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fs-1 text-warning"><i class="fa-solid fa-star-and-crescent"></i></span>
+                            <div>
+                                <h3 class="fw-bold text-white brand-font mb-0">@Model.ZodiacSignName (@Model.SanskritName)</h3>
+                                <span class="text-secondary small">Vedic Forecast for @Model.Date.ToString("dddd, MMMM dd, yyyy")</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-3 mt-3 mt-sm-0">
+                            <div class="text-end">
+                                <span class="text-secondary small d-block">Overall Day Energy</span>
+                                <h4 class="text-warning fw-bold mb-0">@Model.RatingPercentage%</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lucky Highlights Bar -->
+                    <div class="row g-3 text-center mb-4">
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-dark border border-secondary border-opacity-40">
+                                <span class="text-secondary small d-block">Lucky Number</span>
+                                <h5 class="text-warning fw-bold mb-0">@Model.LuckyNumber</h5>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-dark border border-secondary border-opacity-40">
+                                <span class="text-secondary small d-block">Lucky Color</span>
+                                <h5 class="text-info fw-bold mb-0">@Model.LuckyColor</h5>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-dark border border-secondary border-opacity-40">
+                                <span class="text-secondary small d-block">Auspicious Muhurat</span>
+                                <h5 class="text-success fw-bold mb-0">Abhijit (11:45 AM)</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- General Forecast -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold text-warning mb-2"><i class="fa-solid fa-sparkles me-2"></i> General Outlook</h5>
+                        <p class="text-light leading-relaxed">
+                            @Model.GeneralText
+                        </p>
+                    </div>
+
+                    <!-- 4 Dimensions: Career, Love, Finance, Health -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-4 rounded bg-dark border border-secondary border-opacity-30 h-100">
+                                <h6 class="fw-bold text-warning mb-2"><i class="fa-solid fa-briefcase text-warning me-2"></i> Career & Business</h6>
+                                <p class="text-secondary small mb-0">
+                                    @(Model.CareerText ?? "New opportunities for leadership emerge. Stay focused on structured communication with peers.")
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 rounded bg-dark border border-secondary border-opacity-30 h-100">
+                                <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-heart text-danger me-2"></i> Love & Relationships</h6>
+                                <p class="text-secondary small mb-0">
+                                    @(Model.LoveText ?? "Emotional warmth and mutual understanding deepen. Singles may encounter meaningful spiritual connections.")
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 rounded bg-dark border border-secondary border-opacity-30 h-100">
+                                <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-indian-rupee-sign text-success me-2"></i> Wealth & Finance</h6>
+                                <p class="text-secondary small mb-0">
+                                    @(Model.FinanceText ?? "Favorable transits support long-term investments. Avoid speculative short-term gambling today.")
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-4 rounded bg-dark border border-secondary border-opacity-30 h-100">
+                                <h6 class="fw-bold text-info mb-2"><i class="fa-solid fa-shield-heart text-info me-2"></i> Health & Wellness</h6>
+                                <p class="text-secondary small mb-0">
+                                    @(Model.HealthText ?? "Vitality is balanced. Practice morning meditation and ensure proper rest to sustain physical stamina.")
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consult CTA -->
+                    <div class="mt-5 p-4 rounded bg-dark border border-warning border-opacity-30 text-center">
+                        <h5 class="fw-bold text-white mb-2">Need Deeper Personal Insight?</h5>
+                        <p class="text-secondary small mb-3">General horoscopes reflect solar transits. Speak directly to a Vedic astrologer for your specific Janam Kundli analysis.</p>
+                        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold px-4 py-2">
+                            <i class="fa-solid fa-phone me-2"></i> Talk to Astrologer Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

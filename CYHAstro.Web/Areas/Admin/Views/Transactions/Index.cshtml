@@ -1,0 +1,114 @@
+@model IReadOnlyList<CYHAstro.Core.DTOs.Admin.AdminTransactionDto>
+@{
+    ViewData["Title"] = "Platform Financial Ledger";
+    var currentType = ViewBag.CurrentType as string;
+}
+
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="text-white fw-bold mb-1">Financial Audit Ledger</h3>
+            <p class="text-secondary small mb-0">Immutable record of all wallet credits, debits, user recharges, and astrologer consultation fees.</p>
+        </div>
+        <span class="badge bg-dark border border-secondary text-secondary px-3 py-2">
+            Showing Last <strong class="text-warning">@(Model?.Count ?? 0)</strong> Entries
+        </span>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="card admin-card p-3 mb-4">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-secondary small fw-bold text-uppercase me-2"><i class="fa-solid fa-filter text-warning me-1"></i> Filter Type:</span>
+            <a asp-action="Index" asp-route-type=""
+               class="btn btn-sm @(string.IsNullOrEmpty(currentType) ? "btn-gold" : "btn-outline-secondary")">
+                All Transactions
+            </a>
+            <a asp-action="Index" asp-route-type="CREDIT"
+               class="btn btn-sm @(currentType == "CREDIT" ? "btn-gold" : "btn-outline-secondary")">
+                Credits (Recharges & Bonuses)
+            </a>
+            <a asp-action="Index" asp-route-type="DEBIT"
+               class="btn btn-sm @(currentType == "DEBIT" ? "btn-gold" : "btn-outline-secondary")">
+                Debits (Consultation Spends)
+            </a>
+            <a asp-action="Index" asp-route-type="REFUND"
+               class="btn btn-sm @(currentType == "REFUND" ? "btn-gold" : "btn-outline-secondary")">
+                Refunds
+            </a>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="card admin-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-admin mb-0">
+                <thead>
+                    <tr>
+                        <th>Tx ID</th>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Balance Channel</th>
+                        <th>Amount</th>
+                        <th>Ledger Transition</th>
+                        <th>Reference</th>
+                        <th>Description</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var tx in Model)
+                        {
+                            var isCredit = tx.TransactionType == "CREDIT";
+                            <tr>
+                                <td class="font-monospace text-secondary small">#@tx.Id</td>
+                                <td>
+                                    <span class="text-white fw-medium">@tx.UserDisplayName</span>
+                                    <span class="d-block text-secondary small">UID: @tx.UserId</span>
+                                </td>
+                                <td>
+                                    <span class="badge @(isCredit ? "bg-success" : tx.TransactionType == "DEBIT" ? "bg-danger" : "bg-warning text-dark")">
+                                        @tx.TransactionType
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-light">@tx.BalanceType</span>
+                                </td>
+                                <td class="fw-bold @(isCredit ? "text-success" : "text-danger") fs-6">
+                                    @(isCredit ? "+" : "-")₹@tx.Amount.ToString("N2")
+                                </td>
+                                <td>
+                                    <div class="small font-monospace">
+                                        <span class="text-secondary">₹@tx.BalanceBefore.ToString("N2")</span>
+                                        <i class="fa-solid fa-arrow-right mx-1 text-warning" style="font-size: 10px;"></i>
+                                        <span class="text-white fw-bold">₹@tx.BalanceAfter.ToString("N2")</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">@tx.ReferenceType</span>
+                                </td>
+                                <td class="small text-secondary" style="max-width: 250px;">
+                                    @tx.Description
+                                </td>
+                                <td class="text-secondary small font-monospace">
+                                    @tx.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-secondary py-5">
+                                <i class="fa-solid fa-receipt fs-3 mb-2 d-block"></i>
+                                No financial transactions recorded under this filter.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

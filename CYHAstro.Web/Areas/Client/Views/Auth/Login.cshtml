@@ -1,0 +1,56 @@
+@model CYHAstro.Core.DTOs.Auth.LoginRequestDto
+@{
+    ViewData["Title"] = "Sign In";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="cosmic-card p-4 p-sm-5">
+                <div class="text-center mb-4">
+                    <span class="fs-1 text-warning"><i class="fa-solid fa-sun-plant-wilt"></i></span>
+                    <h3 class="fw-bold text-white mt-2">Welcome Back</h3>
+                    <p class="text-secondary small">Access your daily Vedic predictions and astrologer consultations</p>
+                </div>
+
+                <form asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-regular fa-envelope"></i></span>
+                            <input asp-for="Email" type="email" class="form-control form-control-cosmic" placeholder="name@example.com" required autofocus />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="form-label small text-secondary">Password</label>
+                            <a href="#" class="small text-warning text-decoration-none">Forgot password?</a>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-lock"></i></span>
+                            <input asp-for="Password" type="password" class="form-control form-control-cosmic" placeholder="Enter password" required />
+                        </div>
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-gold w-100 py-2 fs-6 mb-3">
+                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Sign In
+                    </button>
+                </form>
+
+                <div class="text-center mt-3 pt-3 border-top border-secondary opacity-75">
+                    <span class="small text-secondary">Don't have an account?</span>
+                    <a asp-controller="Auth" asp-action="Register" asp-route-returnUrl="@ViewData["ReturnUrl"]" class="small text-warning fw-semibold ms-1 text-decoration-none">
+                        Create One Free
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

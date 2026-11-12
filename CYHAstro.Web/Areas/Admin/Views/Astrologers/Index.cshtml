@@ -1,0 +1,165 @@
+@model IReadOnlyList<CYHAstro.Core.DTOs.Admin.AdminAstrologerDto>
+@{
+    ViewData["Title"] = "Astrologer Management";
+    var currentStatus = ViewBag.Status as string;
+    var currentSearch = ViewBag.Search as string;
+}
+
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="text-white fw-bold mb-1">Astrologer Directory</h3>
+            <p class="text-secondary small mb-0">Review profiles, verify expert credentials, adjust platform commission shares, and manage visibility.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-dark border border-warning text-warning px-3 py-2 d-flex align-items-center">
+                Total Listed: <strong class="ms-1">@(Model?.Count ?? 0)</strong>
+            </span>
+        </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="card admin-card p-3 mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-black border-secondary text-warning"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" name="search" class="form-control bg-black text-light border-secondary"
+                           placeholder="Search by astrologer name..." value="@currentSearch" />
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="btn-group w-100" role="group">
+                    <a asp-action="Index" asp-route-status="" asp-route-search="@currentSearch"
+                       class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-gold" : "btn-outline-secondary")">
+                        All
+                    </a>
+                    <a asp-action="Index" asp-route-status="Verified" asp-route-search="@currentSearch"
+                       class="btn btn-sm @(currentStatus == "Verified" ? "btn-gold" : "btn-outline-secondary")">
+                        Verified
+                    </a>
+                    <a asp-action="Index" asp-route-status="Pending" asp-route-search="@currentSearch"
+                       class="btn btn-sm @(currentStatus == "Pending" ? "btn-gold" : "btn-outline-secondary")">
+                        Pending Approval
+                    </a>
+                    <a asp-action="Index" asp-route-status="Inactive" asp-route-search="@currentSearch"
+                       class="btn btn-sm @(currentStatus == "Inactive" ? "btn-gold" : "btn-outline-secondary")">
+                        Inactive
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-warning w-100 btn-sm fw-bold">
+                    Apply Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Astrologers Table -->
+    <div class="card admin-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-admin mb-0">
+                <thead>
+                    <tr>
+                        <th>Astrologer</th>
+                        <th>Rates (Chat / Audio / Video)</th>
+                        <th>Rating / Reviews</th>
+                        <th>Consultations</th>
+                        <th>Commission %</th>
+                        <th>Verification</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="@(string.IsNullOrEmpty(a.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=100" : a.ProfilePhotoUrl)"
+                                             alt="@a.DisplayName" class="rounded-circle border border-warning" style="width: 44px; height: 44px; object-fit: cover;" />
+                                        <div>
+                                            <span class="text-white fw-bold d-block">@a.DisplayName</span>
+                                            <span class="text-secondary small">Exp: @a.ExperienceYears yrs | ID: #@a.Id</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-warning">₹@a.ChatRatePerMinute/m</span>
+                                    <span class="badge bg-dark border border-secondary text-info">₹@a.AudioRatePerMinute/m</span>
+                                    <span class="badge bg-dark border border-secondary text-light">₹@a.VideoRatePerMinute/m</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1 text-warning">
+                                        <i class="fa-solid fa-star"></i>
+                                        <span class="fw-bold">@a.Rating.ToString("F1")</span>
+                                        <span class="text-secondary small">(@a.TotalReviews)</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-white">@a.TotalConsultations</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50">
+                                        @a.CommissionRatePct.ToString("F0")%
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (a.IsVerified)
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Verified</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark"><i class="fa-solid fa-clock me-1"></i> Pending</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (a.IsActive)
+                                    {
+                                        <span class="badge bg-success bg-opacity-25 text-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger bg-opacity-25 text-danger">Suspended</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <form asp-action="QuickToggleVerify" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@a.Id" />
+                                            <input type="hidden" name="isVerified" value="@(a.IsVerified ? "false" : "true")" />
+                                            <button type="submit" class="btn btn-sm @(a.IsVerified ? "btn-outline-secondary" : "btn-outline-success")"
+                                                    title="@(a.IsVerified ? "Revoke Verification" : "Approve Verification")">
+                                                <i class="fa-solid @(a.IsVerified ? "fa-shield-halved" : "fa-circle-check")"></i>
+                                            </button>
+                                        </form>
+
+                                        <a asp-action="Edit" asp-route-id="@a.Id" class="btn btn-sm btn-outline-gold" title="Edit Rates & Commission">
+                                            <i class="fa-solid fa-sliders"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-secondary py-5">
+                                <i class="fa-solid fa-user-slash fs-3 mb-2 d-block"></i>
+                                No astrologers found matching the criteria.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

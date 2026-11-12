@@ -67,8 +67,8 @@ public static class AdminDbSeeder
                     const string sqlWallet = @"
                         IF NOT EXISTS (SELECT 1 FROM dbo.Wallets WHERE UserId = @UserId)
                         BEGIN
-                            INSERT INTO dbo.Wallets (UserId, PaidBalance, BonusBalance, Currency, IsFrozen, CreatedAt)
-                            VALUES (@UserId, 10000.00, 0.00, 'INR', 0, GETUTCDATE());
+                            INSERT INTO dbo.Wallets (UserId, PaidBalance, BonusBalance, CurrencyCode, CreatedAt)
+                            VALUES (@UserId, 10000.00, 0.00, 'INR', GETUTCDATE());
                         END
                     ";
                     await conn.ExecuteAsync(sqlWallet, new { UserId = profileId });

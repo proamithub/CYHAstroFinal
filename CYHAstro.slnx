@@ -6,4 +6,5 @@
   <Project Path="CYHAstro.Infrastructure/CYHAstro.Infrastructure.csproj" />
   <Project Path="CYHAstro.Mobile/CYHAstro.Mobile.csproj" />
   <Project Path="CYHAstro.Tests/CYHAstro.Tests.csproj" />
+  <Project Path="CYHAstro.Web/CYHAstro.Web.csproj" />
 </Solution>

@@ -1,0 +1,24 @@
+@{
+    ViewData["Title"] = "Access Denied";
+    Layout = "_Layout";
+}
+
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-black bg-opacity-75 py-5 px-3">
+    <div class="card admin-card border-danger shadow-lg rounded-4 p-5 text-center" style="max-width: 450px;">
+        <div class="mb-3">
+            <i class="fa-solid fa-ban text-danger display-3"></i>
+        </div>
+        <h4 class="text-white fw-bold mb-2">Restricted Area</h4>
+        <p class="text-secondary small mb-4">
+            You do not hold administrative privileges required to access the CYHAstro Management Console.
+        </p>
+        <div class="d-flex gap-2 justify-content-center">
+            <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-warning">
+                <i class="fa-solid fa-arrow-left me-1"></i> Return to Login
+            </a>
+            <a href="/" class="btn btn-outline-secondary">
+                Seeker Home
+            </a>
+        </div>
+    </div>
+</div>
