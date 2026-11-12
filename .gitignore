@@ -5,6 +5,7 @@
 bin/
 obj/
 out/
+publish/
 
 # Visual Studio
 .vs/
@@ -26,6 +27,9 @@ artifacts/
 secrets.json
 appsettings.secrets.json
 appsettings.Local.json
+
+# Production config has real secrets — NEVER commit
+appsettings.Production.json
 
 # Environment files (NEVER commit)
 .env

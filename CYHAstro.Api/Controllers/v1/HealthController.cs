@@ -7,7 +7,7 @@ namespace CYHAstro.Api.Controllers.v1;
 /// Used by load balancers, monitoring, and CI/CD pipelines.
 /// </summary>
 [ApiController]
-[Route("api/v{version:apiVersion}/[controller]")]
+[Route("api/v1/[controller]")]
 public sealed class HealthController : ControllerBase
 {
     private readonly ILogger<HealthController> _logger;
