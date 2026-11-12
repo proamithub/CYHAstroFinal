@@ -9,13 +9,16 @@ namespace CYHAstro.Api.Controllers.v1;
 public sealed class AstrologyController : ControllerBase
 {
     private readonly IAstrologyCalculationService _astrologyService;
+    private readonly IKundliPdfService _pdfService;
     private readonly ILogger<AstrologyController> _logger;
 
     public AstrologyController(
         IAstrologyCalculationService astrologyService,
+        IKundliPdfService pdfService,
         ILogger<AstrologyController> logger)
     {
         _astrologyService = astrologyService;
+        _pdfService = pdfService;
         _logger = logger;
     }
 
@@ -63,6 +66,37 @@ public sealed class AstrologyController : ControllerBase
         return result.Match<IActionResult>(
             success => Ok(success),
             error => BadRequest(new { error, code = result.ErrorCode }));
+    }
+
+    /// <summary>
+    /// Generate a downloadable high-resolution 15-page branded Vedic Kundli PDF report.
+    /// Includes Avakahada chakra, Graha Spashta table, Bhava chart, and Gemini AI synthesis.
+    /// </summary>
+    [HttpPost("kundli/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GenerateKundliPdf(
+        [FromBody] KundliRequestDto request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest(new { error = "Name is required." });
+        }
+
+        var chartResult = await _astrologyService.GenerateKundliAsync(request, ct);
+        if (!chartResult.IsSuccess || chartResult.Value == null)
+        {
+            return BadRequest(new { error = chartResult.Error ?? "Kundli calculation failed." });
+        }
+
+        var pdfResult = await _pdfService.GenerateKundliPdfAsync(chartResult.Value, request, ct);
+        if (!pdfResult.IsSuccess || pdfResult.Value == null)
+        {
+            return BadRequest(new { error = pdfResult.Error ?? "PDF generation failed." });
+        }
+
+        var safeName = string.Join("_", request.Name.Split(Path.GetInvalidFileNameChars()));
+        return File(pdfResult.Value, "application/pdf", $"CYHAstro_Kundli_{safeName}.pdf");
     }
 
     /// <summary>

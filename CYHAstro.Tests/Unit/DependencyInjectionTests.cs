@@ -69,5 +69,7 @@ public sealed class DependencyInjectionTests
         Assert.NotNull(sp.GetRequiredService<IAstrologyCalculationService>());
         Assert.NotNull(sp.GetRequiredService<IAdminService>());
         Assert.NotNull(sp.GetRequiredService<IConsultationService>());
+        Assert.NotNull(sp.GetRequiredService<IPanchangService>());
+        Assert.NotNull(sp.GetRequiredService<IKundliPdfService>());
     }
 }

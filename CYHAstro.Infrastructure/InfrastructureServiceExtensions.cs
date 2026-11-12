@@ -79,6 +79,8 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstrologyCalculationService, CYHAstro.Infrastructure.Services.AstrologyCalculationService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAdminService, CYHAstro.Infrastructure.Services.AdminService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IConsultationService, CYHAstro.Infrastructure.Services.ConsultationService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IPanchangService, CYHAstro.Infrastructure.Services.PanchangService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IKundliPdfService, CYHAstro.Infrastructure.Reports.KundliPdfGenerator>();
 
         // --- Background Billing Engine ---
         services.AddHostedService<CYHAstro.Infrastructure.BackgroundJobs.ConsultationBillingBackgroundService>();

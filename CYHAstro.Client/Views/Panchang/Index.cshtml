@@ -1,0 +1,437 @@
+@model CYHAstro.Core.DTOs.Panchang.PanchangResponseDto
+@{
+    ViewData["Title"] = $"Today's Panchang & Choghadiya - {Model.LocationName}";
+    var selectedDate = (string)ViewBag.SelectedDate ?? DateTime.Today.ToString("yyyy-MM-dd");
+    var todayStr = DateTime.Today.ToString("yyyy-MM-dd");
+    var yesterdayStr = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
+    var tomorrowStr = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
+}
+
+<div class="container py-4">
+    <!-- Header Banner -->
+    <div class="cosmic-card p-4 mb-4 position-relative overflow-hidden">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <span class="badge bg-gold text-dark fw-bold px-3 py-1 mb-2">
+                    <i class="fa-solid fa-om me-1"></i> Authentic Vedic Panchang
+                </span>
+                <h1 class="text-white brand-font fw-bold mb-1">
+                    @Model.Date.ToString("dddd, dd MMMM yyyy")
+                </h1>
+                <p class="text-secondary mb-3">
+                    <i class="fa-solid fa-location-dot text-warning me-1"></i> @Model.LocationName 
+                    <span class="text-muted ms-2">(Lat: @Model.Latitude.ToString("F2")°, Lon: @Model.Longitude.ToString("F2")°)</span>
+                </p>
+                <div class="d-flex flex-wrap gap-2 text-white small">
+                    <span class="badge bg-dark border border-secondary px-2 py-1">
+                        <strong>Vikram:</strong> @Model.VikramSamvat
+                    </span>
+                    <span class="badge bg-dark border border-secondary px-2 py-1">
+                        <strong>Shaka:</strong> @Model.ShakaSamvat
+                    </span>
+                    <span class="badge bg-dark border border-secondary px-2 py-1">
+                        <strong>Ayana:</strong> @Model.Ayana
+                    </span>
+                    <span class="badge bg-dark border border-secondary px-2 py-1">
+                        <strong>Ritu:</strong> @Model.Ritu
+                    </span>
+                </div>
+            </div>
+
+            <!-- Date Switcher Controls -->
+            <div class="col-lg-5 mt-4 mt-lg-0 text-lg-end">
+                <div class="btn-group mb-2">
+                    <a asp-action="Index" asp-route-date="@yesterdayStr" asp-route-location="@Model.LocationName" asp-route-lat="@Model.Latitude" asp-route-lon="@Model.Longitude" 
+                       class="btn btn-outline-secondary btn-sm @(selectedDate == yesterdayStr ? "active" : "")">
+                        <i class="fa-solid fa-chevron-left me-1"></i> Yesterday
+                    </a>
+                    <a asp-action="Index" asp-route-date="@todayStr" asp-route-location="@Model.LocationName" asp-route-lat="@Model.Latitude" asp-route-lon="@Model.Longitude" 
+                       class="btn btn-outline-gold btn-sm @(selectedDate == todayStr ? "active" : "")">
+                        Today
+                    </a>
+                    <a asp-action="Index" asp-route-date="@tomorrowStr" asp-route-location="@Model.LocationName" asp-route-lat="@Model.Latitude" asp-route-lon="@Model.Longitude" 
+                       class="btn btn-outline-secondary btn-sm @(selectedDate == tomorrowStr ? "active" : "")">
+                        Tomorrow <i class="fa-solid fa-chevron-right ms-1"></i>
+                    </a>
+                </div>
+
+                <!-- Custom Date & City Picker Form -->
+                <form asp-action="Index" method="get" class="d-flex gap-2 justify-content-lg-end mt-2">
+                    <input type="hidden" name="location" value="@Model.LocationName" />
+                    <input type="hidden" name="lat" value="@Model.Latitude" />
+                    <input type="hidden" name="lon" value="@Model.Longitude" />
+                    <input type="date" name="date" value="@selectedDate" class="form-control form-control-sm cosmic-input w-auto text-white" />
+                    <button type="submit" class="btn btn-gold btn-sm">
+                        <i class="fa-solid fa-calendar-check me-1"></i> Check
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sacred City Presets -->
+        <div class="border-top border-secondary pt-3 mt-3">
+            <span class="text-secondary small me-2"><i class="fa-solid fa-city me-1"></i> Popular Cities:</span>
+            <div class="d-inline-flex flex-wrap gap-1">
+                <a asp-action="Index" asp-route-location="New Delhi, India" asp-route-lat="28.6139" asp-route-lon="77.2090" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Delhi") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">New Delhi</a>
+                <a asp-action="Index" asp-route-location="Varanasi (Kashi), India" asp-route-lat="25.3176" asp-route-lon="82.9739" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Varanasi") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Varanasi</a>
+                <a asp-action="Index" asp-route-location="Ujjain, India" asp-route-lat="23.1765" asp-route-lon="75.7885" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Ujjain") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Ujjain</a>
+                <a asp-action="Index" asp-route-location="Ayodhya, India" asp-route-lat="26.7922" asp-route-lon="82.1998" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Ayodhya") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Ayodhya</a>
+                <a asp-action="Index" asp-route-location="Mumbai, India" asp-route-lat="19.0760" asp-route-lon="72.8777" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Mumbai") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Mumbai</a>
+                <a asp-action="Index" asp-route-location="Bengaluru, India" asp-route-lat="12.9716" asp-route-lon="77.5946" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Bengaluru") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Bengaluru</a>
+                <a asp-action="Index" asp-route-location="Kolkata, India" asp-route-lat="22.5726" asp-route-lon="88.3639" asp-route-date="@selectedDate" 
+                   class="badge @(Model.LocationName.Contains("Kolkata") ? "bg-warning text-dark" : "bg-dark text-secondary border border-secondary") text-decoration-none">Kolkata</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Kaal Alert -->
+    @if (Model.RahuKaal.IsCurrentlyActive)
+    {
+        <div class="alert alert-danger bg-danger bg-opacity-25 border border-danger d-flex align-items-center mb-4" role="alert">
+            <i class="fa-solid fa-triangle-exclamation text-danger fs-3 me-3 animate-pulse"></i>
+            <div>
+                <strong class="text-danger">Rahu Kaal is ACTIVE right now!</strong>
+                <p class="mb-0 text-white small">Current window: <strong>@Model.RahuKaal.StartTime</strong> to <strong>@Model.RahuKaal.EndTime</strong>. Avoid starting new ventures, significant financial deals, or travel.</p>
+            </div>
+        </div>
+    }
+    else if (Model.AbhijitMuhurat.IsCurrentlyActive)
+    {
+        <div class="alert alert-success bg-success bg-opacity-25 border border-success d-flex align-items-center mb-4" role="alert">
+            <i class="fa-solid fa-circle-check text-success fs-3 me-3"></i>
+            <div>
+                <strong class="text-success">Abhijit Muhurat is ACTIVE right now!</strong>
+                <p class="mb-0 text-white small">Most auspicious window: <strong>@Model.AbhijitMuhurat.StartTime</strong> to <strong>@Model.AbhijitMuhurat.EndTime</strong>. Highly favorable for auspicious undertakings.</p>
+            </div>
+        </div>
+    }
+
+    <!-- Core 5 Elements of Panchang -->
+    <div class="row g-3 mb-4">
+        <!-- Tithi -->
+        <div class="col-md-6 col-lg-3">
+            <div class="cosmic-card p-3 h-100 border-top border-warning border-3">
+                <span class="text-secondary small fw-bold text-uppercase d-block mb-1">
+                    <i class="fa-solid fa-moon text-warning me-1"></i> Tithi
+                </span>
+                <h4 class="text-warning fw-bold mb-0">@Model.Tithi.Name</h4>
+                <span class="badge bg-dark border border-secondary my-1">@Model.Tithi.Paksha</span>
+                <p class="text-white small mb-1">Upto: <strong>@Model.Tithi.EndTime</strong></p>
+                <small class="text-secondary d-block">Deity: @Model.Tithi.Deity</small>
+            </div>
+        </div>
+
+        <!-- Nakshatra -->
+        <div class="col-md-6 col-lg-3">
+            <div class="cosmic-card p-3 h-100 border-top border-info border-3">
+                <span class="text-secondary small fw-bold text-uppercase d-block mb-1">
+                    <i class="fa-solid fa-star text-info me-1"></i> Nakshatra
+                </span>
+                <h4 class="text-info fw-bold mb-0">@Model.Nakshatra.Name</h4>
+                <span class="badge bg-dark border border-secondary my-1">Pada @Model.Nakshatra.Pada</span>
+                <p class="text-white small mb-1">Upto: <strong>@Model.Nakshatra.EndTime</strong></p>
+                <small class="text-secondary d-block">Lord: @Model.Nakshatra.Lord | Deity: @Model.Nakshatra.Deity</small>
+            </div>
+        </div>
+
+        <!-- Yoga -->
+        <div class="col-md-6 col-lg-3">
+            <div class="cosmic-card p-3 h-100 border-top border-success border-3">
+                <span class="text-secondary small fw-bold text-uppercase d-block mb-1">
+                    <i class="fa-solid fa-circle-nodes text-success me-1"></i> Yoga
+                </span>
+                <h4 class="text-success fw-bold mb-0">@Model.Yoga.Name</h4>
+                <span class="badge bg-dark border border-secondary my-1">Yoga #@Model.Yoga.Number</span>
+                <p class="text-white small mb-1">Upto: <strong>@Model.Yoga.EndTime</strong></p>
+                <small class="text-secondary d-block">@Model.Yoga.Meaning</small>
+            </div>
+        </div>
+
+        <!-- Karana & Vaar -->
+        <div class="col-md-6 col-lg-3">
+            <div class="cosmic-card p-3 h-100 border-top border-danger border-3">
+                <span class="text-secondary small fw-bold text-uppercase d-block mb-1">
+                    <i class="fa-solid fa-calendar-day text-danger me-1"></i> Karana & Vaar
+                </span>
+                <h4 class="text-danger fw-bold mb-0">@Model.Karana.Name</h4>
+                <span class="badge bg-dark border border-secondary my-1">@Model.Karana.Nature</span>
+                <p class="text-white small mb-1">Vaar: <strong>@Model.VaarSanskrit (@Model.VaarEnglish)</strong></p>
+                <small class="text-secondary d-block">Day Lord: @Model.VaarLord</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solar & Lunar Dynamics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="cosmic-card p-3">
+                <h6 class="text-white fw-bold mb-3"><i class="fa-solid fa-sun text-warning me-2"></i> Solar & Celestial Timings</h6>
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Sunrise</span>
+                            <strong class="text-warning fs-5">@Model.Sunrise</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Sunset</span>
+                            <strong class="text-warning fs-5">@Model.Sunset</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Sun Sign (Surya Rashi)</span>
+                            <strong class="text-white">@Model.SunSign</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Lahiri Ayanamsha</span>
+                            <strong class="text-white">@Model.AyanamshaLahiri°</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="cosmic-card p-3">
+                <h6 class="text-white fw-bold mb-3"><i class="fa-solid fa-moon text-info me-2"></i> Lunar Dynamics</h6>
+                <div class="row g-2 text-center">
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Moonrise</span>
+                            <strong class="text-info fs-5">@Model.Moonrise</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Moonset</span>
+                            <strong class="text-info fs-5">@Model.Moonset</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Moon Sign (Chandra Rashi)</span>
+                            <strong class="text-white">@Model.MoonSign</strong>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bg-dark p-2 rounded border border-secondary">
+                            <span class="text-secondary small d-block">Lunar Month (Amanta)</span>
+                            <strong class="text-white">@Model.LunarMonthAmanta</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auspicious & Inauspicious Muhurata Table -->
+    <div class="row g-3 mb-4">
+        <!-- Auspicious Muhurats -->
+        <div class="col-md-6">
+            <div class="cosmic-card p-4 h-100">
+                <h5 class="text-success fw-bold mb-3">
+                    <i class="fa-solid fa-certificate text-success me-2"></i> Auspicious Timings (Shubh Muhurat)
+                </h5>
+                <div class="list-group list-group-flush bg-transparent">
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Abhijit Muhurat</strong>
+                            <small class="text-secondary d-block">Optimal for new deeds & agreements</small>
+                        </div>
+                        <span class="badge @(Model.AbhijitMuhurat.IsCurrentlyActive ? "bg-success text-white" : "bg-dark border border-success text-success") fs-6">
+                            @Model.AbhijitMuhurat.StartTime - @Model.AbhijitMuhurat.EndTime
+                        </span>
+                    </div>
+
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Brahma Muhurat</strong>
+                            <small class="text-secondary d-block">Ideal for meditation & spiritual study</small>
+                        </div>
+                        <span class="badge @(Model.BrahmaMuhurat.IsCurrentlyActive ? "bg-success text-white" : "bg-dark border border-success text-success") fs-6">
+                            @Model.BrahmaMuhurat.StartTime - @Model.BrahmaMuhurat.EndTime
+                        </span>
+                    </div>
+
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Amrit Kaal</strong>
+                            <small class="text-secondary d-block">Nectar period for beneficial results</small>
+                        </div>
+                        <span class="badge @(Model.AmritKaal.IsCurrentlyActive ? "bg-success text-white" : "bg-dark border border-success text-success") fs-6">
+                            @Model.AmritKaal.StartTime - @Model.AmritKaal.EndTime
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inauspicious Muhurats -->
+        <div class="col-md-6">
+            <div class="cosmic-card p-4 h-100">
+                <h5 class="text-danger fw-bold mb-3">
+                    <i class="fa-solid fa-ban text-danger me-2"></i> Inauspicious Timings (Ashubh Muhurat)
+                </h5>
+                <div class="list-group list-group-flush bg-transparent">
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Rahu Kaal</strong>
+                            <small class="text-secondary d-block">Strictly avoided for starting tasks</small>
+                        </div>
+                        <span class="badge @(Model.RahuKaal.IsCurrentlyActive ? "bg-danger text-white animate-pulse" : "bg-dark border border-danger text-danger") fs-6">
+                            @Model.RahuKaal.StartTime - @Model.RahuKaal.EndTime
+                        </span>
+                    </div>
+
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Gulika Kaal</strong>
+                            <small class="text-secondary d-block">Saturn's son influence</small>
+                        </div>
+                        <span class="badge @(Model.GulikaKaal.IsCurrentlyActive ? "bg-danger text-white" : "bg-dark border border-secondary text-secondary") fs-6">
+                            @Model.GulikaKaal.StartTime - @Model.GulikaKaal.EndTime
+                        </span>
+                    </div>
+
+                    <div class="list-group-item bg-transparent d-flex justify-content-between align-items-center border-secondary px-0">
+                        <div>
+                            <strong class="text-white">Yamaganda Kaal</strong>
+                            <small class="text-secondary d-block">Afflictive death god influence</small>
+                        </div>
+                        <span class="badge @(Model.YamagandaKaal.IsCurrentlyActive ? "bg-danger text-white" : "bg-dark border border-secondary text-secondary") fs-6">
+                            @Model.YamagandaKaal.StartTime - @Model.YamagandaKaal.EndTime
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day & Night Choghadiya Section -->
+    <div class="cosmic-card p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="text-white fw-bold mb-1"><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i> Today's Choghadiya</h4>
+                <p class="text-secondary small mb-0">Daily 8 Day & 8 Night astrological divisions with auspiciousness ratings.</p>
+            </div>
+            <div class="d-flex gap-2 mt-2 mt-sm-0">
+                <span class="badge bg-success">Amrit / Shubh / Labh (Best)</span>
+                <span class="badge bg-info text-dark">Char (Neutral)</span>
+                <span class="badge bg-danger">Rog / Kaal / Udveg (Avoid)</span>
+            </div>
+        </div>
+
+        <ul class="nav nav-pills mb-3" id="choghadiyaTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active btn-sm" id="day-tab" data-bs-toggle="pill" data-bs-target="#day-content" type="button" role="tab">
+                    <i class="fa-solid fa-sun me-1 text-warning"></i> Day Choghadiya (@Model.Sunrise - @Model.Sunset)
+                </button>
+            </li>
+            <li class="nav-item ms-2" role="presentation">
+                <button class="nav-link btn-sm" id="night-tab" data-bs-toggle="pill" data-bs-target="#night-content" type="button" role="tab">
+                    <i class="fa-solid fa-moon me-1 text-info"></i> Night Choghadiya (@Model.Sunset onwards)
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="choghadiyaTabContent">
+            <!-- Day Choghadiya Table -->
+            <div class="tab-pane fade show active" id="day-content" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-secondary small">
+                                <th>#</th>
+                                <th>Choghadiya</th>
+                                <th>Nature / Quality</th>
+                                <th>Ruler Planet</th>
+                                <th>Time Window</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.DayChoghadiya)
+                            {
+                                <tr class="@(c.IsCurrentlyActive ? "border border-warning bg-warning bg-opacity-10" : "")">
+                                    <td class="text-secondary">@c.PeriodNumber</td>
+                                    <td>
+                                        <strong class="text-white fs-6">@c.Name</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@c.ColorBadge">@c.Nature</span>
+                                    </td>
+                                    <td class="text-secondary">@c.RulerPlanet</td>
+                                    <td class="text-white fw-bold">@c.StartTime - @c.EndTime</td>
+                                    <td class="text-end">
+                                        @if (c.IsCurrentlyActive)
+                                        {
+                                            <span class="badge bg-warning text-dark fw-bold animate-pulse">Active Now</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Night Choghadiya Table -->
+            <div class="tab-pane fade" id="night-content" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-secondary small">
+                                <th>#</th>
+                                <th>Choghadiya</th>
+                                <th>Nature / Quality</th>
+                                <th>Ruler Planet</th>
+                                <th>Time Window</th>
+                                <th class="text-end">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in Model.NightChoghadiya)
+                            {
+                                <tr class="@(c.IsCurrentlyActive ? "border border-warning bg-warning bg-opacity-10" : "")">
+                                    <td class="text-secondary">@c.PeriodNumber</td>
+                                    <td>
+                                        <strong class="text-white fs-6">@c.Name</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@c.ColorBadge">@c.Nature</span>
+                                    </td>
+                                    <td class="text-secondary">@c.RulerPlanet</td>
+                                    <td class="text-white fw-bold">@c.StartTime - @c.EndTime</td>
+                                    <td class="text-end">
+                                        @if (c.IsCurrentlyActive)
+                                        {
+                                            <span class="badge bg-warning text-dark fw-bold animate-pulse">Active Now</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

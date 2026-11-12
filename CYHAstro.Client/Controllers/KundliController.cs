@@ -9,15 +9,18 @@ public sealed class KundliController : Controller
 {
     private readonly IAstrologyCalculationService _astrologyService;
     private readonly IProfileService _profileService;
+    private readonly IKundliPdfService _pdfService;
     private readonly ILogger<KundliController> _logger;
 
     public KundliController(
         IAstrologyCalculationService astrologyService,
         IProfileService profileService,
+        IKundliPdfService pdfService,
         ILogger<KundliController> logger)
     {
         _astrologyService = astrologyService;
         _profileService = profileService;
+        _pdfService = pdfService;
         _logger = logger;
     }
 
@@ -77,7 +80,36 @@ public sealed class KundliController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        ViewBag.KundliRequest = model;
         return View("Result", result.Value);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DownloadPdf(KundliRequestDto model, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            TempData["Error"] = "Name is required to generate Kundli PDF.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var chartResult = await _astrologyService.GenerateKundliAsync(model, ct);
+        if (!chartResult.IsSuccess || chartResult.Value == null)
+        {
+            TempData["Error"] = chartResult.Error ?? "Kundli calculation failed.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var pdfResult = await _pdfService.GenerateKundliPdfAsync(chartResult.Value, model, ct);
+        if (!pdfResult.IsSuccess || pdfResult.Value == null)
+        {
+            TempData["Error"] = pdfResult.Error ?? "PDF generation failed.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var safeName = string.Join("_", model.Name.Split(Path.GetInvalidFileNameChars()));
+        return File(pdfResult.Value, "application/pdf", $"CYHAstro_Kundli_{safeName}.pdf");
     }
 
     [HttpGet]
