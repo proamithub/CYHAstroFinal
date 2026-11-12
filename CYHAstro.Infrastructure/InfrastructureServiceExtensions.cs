@@ -20,7 +20,8 @@ public static class InfrastructureServiceExtensions
         IConfiguration configuration)
     {
         // --- Database (Dapper) ---
-        services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+        services.AddSingleton<DbConnectionFactory>();
+        services.AddSingleton<IDbConnectionFactory>(sp => sp.GetRequiredService<DbConnectionFactory>());
 
         // --- Identity DbContext (EF Core — only for ASP.NET Identity) ---
         var connStr = configuration.GetConnectionString("DefaultConnection")
@@ -34,10 +35,10 @@ public static class InfrastructureServiceExtensions
             }));
 
         // --- Repositories (Dapper) ---
-        services.AddScoped<IWalletRepository, WalletRepository>();
+        services.AddScoped<IWalletRepository, CYHAstro.Infrastructure.Data.Repositories.WalletRepository>();
         services.AddScoped<IConsultationRepository, ConsultationRepository>();
-        services.AddScoped<IAstrologerRepository, AstrologerRepository>();
-        services.AddScoped<IBirthProfileRepository, BirthProfileRepository>();
+        services.AddScoped<IAstrologerRepository, CYHAstro.Infrastructure.Data.Repositories.AstrologerRepository>();
+        services.AddScoped<IBirthProfileRepository, CYHAstro.Infrastructure.Data.Repositories.BirthProfileRepository>();
 
         // --- Redis Distributed Cache ---
         var redisConnectionString = configuration.GetConnectionString("Redis");
@@ -56,11 +57,6 @@ public static class InfrastructureServiceExtensions
             services.AddDistributedMemoryCache();
             services.AddSingleton<ICacheService, RedisCacheService>();
         }
-
-        // --- Dapper Repositories ---
-        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IAstrologerRepository, CYHAstro.Infrastructure.Data.Repositories.AstrologerRepository>();
-        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IBirthProfileRepository, CYHAstro.Infrastructure.Data.Repositories.BirthProfileRepository>();
-        services.AddScoped<CYHAstro.Core.Interfaces.Repositories.IWalletRepository, CYHAstro.Infrastructure.Data.Repositories.WalletRepository>();
 
         // --- Authentication & Security Services ---
         services.AddScoped<CYHAstro.Core.Interfaces.Services.ITokenService, CYHAstro.Infrastructure.Identity.TokenService>();

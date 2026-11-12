@@ -10,10 +10,10 @@ namespace CYHAstro.Infrastructure.Services;
 
 public sealed class AdminService : IAdminService
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly ILogger<AdminService> _logger;
 
-    public AdminService(DbConnectionFactory db, ILogger<AdminService> logger)
+    public AdminService(IDbConnectionFactory db, ILogger<AdminService> logger)
     {
         _db = db;
         _logger = logger;

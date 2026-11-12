@@ -12,7 +12,7 @@ namespace CYHAstro.Infrastructure.Services;
 
 public sealed class ConsultationService : IConsultationService
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly IAstrologerRepository _astrologerRepo;
     private readonly IWalletService _walletService;
     private readonly IWalletRepository _walletRepo;
@@ -20,7 +20,7 @@ public sealed class ConsultationService : IConsultationService
     private readonly ILogger<ConsultationService> _logger;
 
     public ConsultationService(
-        DbConnectionFactory db,
+        IDbConnectionFactory db,
         IAstrologerRepository astrologerRepo,
         IWalletService walletService,
         IWalletRepository walletRepo,

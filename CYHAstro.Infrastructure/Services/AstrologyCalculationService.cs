@@ -13,7 +13,7 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
 {
     private readonly IAiAstrologyService _aiService;
     private readonly ICacheService _cache;
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly ILogger<AstrologyCalculationService> _logger;
 
     private static readonly string[] ZodiacNames = new[]
@@ -40,7 +40,7 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
     public AstrologyCalculationService(
         IAiAstrologyService aiService,
         ICacheService cache,
-        DbConnectionFactory db,
+        IDbConnectionFactory db,
         ILogger<AstrologyCalculationService> logger)
     {
         _aiService = aiService;

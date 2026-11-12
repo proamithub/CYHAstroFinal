@@ -15,13 +15,13 @@ public sealed class AstrologerService : IAstrologerService
 {
     private readonly IAstrologerRepository _astrologerRepo;
     private readonly ICacheService _cache;
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly ILogger<AstrologerService> _logger;
 
     public AstrologerService(
         IAstrologerRepository astrologerRepo,
         ICacheService cache,
-        DbConnectionFactory db,
+        IDbConnectionFactory db,
         ILogger<AstrologerService> logger)
     {
         _astrologerRepo = astrologerRepo;

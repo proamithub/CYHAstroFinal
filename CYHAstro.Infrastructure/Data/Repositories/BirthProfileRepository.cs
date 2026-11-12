@@ -8,9 +8,9 @@ namespace CYHAstro.Infrastructure.Data.Repositories;
 
 public sealed class BirthProfileRepository : IBirthProfileRepository
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
 
-    public BirthProfileRepository(DbConnectionFactory db)
+    public BirthProfileRepository(IDbConnectionFactory db)
     {
         _db = db;
     }

@@ -13,12 +13,12 @@ namespace CYHAstro.Infrastructure.Services;
 
 public sealed class ProfileService : IProfileService
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly IBirthProfileRepository _birthRepo;
     private readonly ILogger<ProfileService> _logger;
 
     public ProfileService(
-        DbConnectionFactory db,
+        IDbConnectionFactory db,
         IBirthProfileRepository birthRepo,
         ILogger<ProfileService> logger)
     {

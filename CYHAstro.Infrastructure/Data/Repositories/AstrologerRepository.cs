@@ -8,9 +8,9 @@ namespace CYHAstro.Infrastructure.Data.Repositories;
 
 public sealed class AstrologerRepository : IAstrologerRepository
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
 
-    public AstrologerRepository(DbConnectionFactory db)
+    public AstrologerRepository(IDbConnectionFactory db)
     {
         _db = db;
     }

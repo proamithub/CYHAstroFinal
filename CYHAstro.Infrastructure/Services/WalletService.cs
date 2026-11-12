@@ -16,13 +16,13 @@ namespace CYHAstro.Infrastructure.Services;
 public sealed class WalletService : IWalletService
 {
     private readonly IWalletRepository _walletRepo;
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
     private readonly IConfiguration _configuration;
     private readonly ILogger<WalletService> _logger;
 
     public WalletService(
         IWalletRepository walletRepo,
-        DbConnectionFactory db,
+        IDbConnectionFactory db,
         IConfiguration configuration,
         ILogger<WalletService> logger)
     {

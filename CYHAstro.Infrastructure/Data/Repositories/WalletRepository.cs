@@ -8,9 +8,9 @@ namespace CYHAstro.Infrastructure.Data.Repositories;
 
 public sealed class WalletRepository : IWalletRepository
 {
-    private readonly DbConnectionFactory _db;
+    private readonly IDbConnectionFactory _db;
 
-    public WalletRepository(DbConnectionFactory db)
+    public WalletRepository(IDbConnectionFactory db)
     {
         _db = db;
     }
