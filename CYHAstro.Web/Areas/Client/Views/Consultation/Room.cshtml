@@ -168,6 +168,8 @@
 @section Scripts {
     <!-- SignalR Client Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <!-- LiveKit Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 
     <script>
         const sessionPublicId = "@Model.PublicId";
@@ -269,18 +271,97 @@
             if (e.key === "Enter") sendMessage();
         }
 
+        // =================== LiveKit Integration ===================
+        const livekitToken = '@ViewBag.LiveKitToken';
+        const livekitUrl = 'wss://cyhastro-pimmehdb.livekit.cloud';
+        const sessionType = '@Model.SessionType';
+        let livekitRoom = null;
+
+        async function connectLiveKit() {
+            if (!livekitToken || livekitToken === '' || sessionType === 'CHAT') return;
+
+            try {
+                livekitRoom = new LivekitClient.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                    if (track.kind === LivekitClient.Track.Kind.Video) {
+                        const videoEl = track.attach();
+                        videoEl.style.width = '100%';
+                        videoEl.style.height = '100%';
+                        videoEl.style.objectFit = 'cover';
+                        videoEl.style.borderRadius = '12px';
+                        const container = document.getElementById('videoContainer');
+                        const placeholder = document.getElementById('remoteParticipantCard');
+                        if (placeholder) placeholder.style.display = 'none';
+                        container.appendChild(videoEl);
+                    } else if (track.kind === LivekitClient.Track.Kind.Audio) {
+                        const audioEl = track.attach();
+                        document.body.appendChild(audioEl);
+                    }
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+                    track.detach();
+                });
+
+                livekitRoom.on(LivekitClient.RoomEvent.Disconnected, () => {
+                    console.log('LiveKit disconnected');
+                });
+
+                await livekitRoom.connect(livekitUrl, livekitToken);
+                console.log('LiveKit connected to room:', livekitRoom.name);
+
+                // Publish local tracks
+                if (sessionType === 'VIDEO') {
+                    await livekitRoom.localParticipant.enableCameraAndMicrophone();
+                    const localVideoTrack = livekitRoom.localParticipant.getTrackPublication(LivekitClient.Track.Source.Camera)?.track;
+                    if (localVideoTrack) {
+                        const localVideoEl = localVideoTrack.attach();
+                        localVideoEl.style.width = '100%';
+                        localVideoEl.style.height = '100%';
+                        localVideoEl.style.objectFit = 'cover';
+                        const localContainer = document.getElementById('localParticipantCard');
+                        localContainer.innerHTML = '';
+                        localContainer.appendChild(localVideoEl);
+                    }
+                } else if (sessionType === 'AUDIO') {
+                    await livekitRoom.localParticipant.setMicrophoneEnabled(true);
+                }
+
+            } catch (err) {
+                console.error('LiveKit connection error:', err);
+            }
+        }
+
+        // Connect LiveKit when page loads (for VIDEO and AUDIO sessions)
+        connectLiveKit();
+        // =================== End LiveKit ===================
+
         let isAudioMuted = false;
-        function toggleAudio() {
+        async function toggleAudio() {
             isAudioMuted = !isAudioMuted;
-            const btn = document.getElementById("micToggleBtn");
-            btn.innerHTML = isAudioMuted ? '<i class="fa-solid fa-microphone-slash text-danger fs-5"></i>' : '<i class="fa-solid fa-microphone fs-5"></i>';
+            const btn = document.getElementById('micToggleBtn');
+            btn.innerHTML = isAudioMuted
+                ? '<i class="fa-solid fa-microphone-slash text-danger fs-5"></i>'
+                : '<i class="fa-solid fa-microphone fs-5"></i>';
+            if (livekitRoom) {
+                await livekitRoom.localParticipant.setMicrophoneEnabled(!isAudioMuted);
+            }
         }
 
         let isVideoOff = false;
-        function toggleVideo() {
+        async function toggleVideo() {
             isVideoOff = !isVideoOff;
-            const btn = document.getElementById("camToggleBtn");
-            btn.innerHTML = isVideoOff ? '<i class="fa-solid fa-video-slash text-danger fs-5"></i>' : '<i class="fa-solid fa-video fs-5"></i>';
+            const btn = document.getElementById('camToggleBtn');
+            btn.innerHTML = isVideoOff
+                ? '<i class="fa-solid fa-video-slash text-danger fs-5"></i>'
+                : '<i class="fa-solid fa-video fs-5"></i>';
+            if (livekitRoom) {
+                await livekitRoom.localParticipant.setCameraEnabled(!isVideoOff);
+            }
         }
     </script>
 }

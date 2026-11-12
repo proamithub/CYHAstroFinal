@@ -28,7 +28,9 @@ builder.Services.AddIdentity<CYHAstroIdentityUser, IdentityRole>(options =>
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "ClientCookie";
+    options.DefaultAuthenticateScheme = "ClientCookie";
     options.DefaultChallengeScheme = "ClientCookie";
+    options.DefaultSignInScheme = "ClientCookie";
 })
 .AddCookie("ClientCookie", options =>
 {

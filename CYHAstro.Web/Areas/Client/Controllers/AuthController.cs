@@ -166,6 +166,72 @@ public sealed class AuthController : Controller
         return RedirectToAction("Index", "Dashboard", new { area = "Client" });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GoogleLogin([FromForm] string idToken, string? returnUrl = null)
+    {
+        if (string.IsNullOrWhiteSpace(idToken))
+        {
+            TempData["Error"] = "Google sign-in failed. Please try again.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var userAgent = Request.Headers.UserAgent.ToString();
+
+        var request = new GoogleLoginRequestDto { IdToken = idToken };
+        var authResult = await _authService.GoogleLoginAsync(request, ip, userAgent, CancellationToken.None);
+
+        if (!authResult.IsSuccess)
+        {
+            TempData["Error"] = authResult.Error ?? "Google sign-in failed.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        var identityUser = await _userManager.FindByEmailAsync(authResult.Value!.User.Email);
+        if (identityUser == null)
+        {
+            identityUser = new CYHAstroIdentityUser
+            {
+                UserName = authResult.Value.User.Email,
+                Email = authResult.Value.User.Email,
+                EmailConfirmed = true
+            };
+            await _userManager.CreateAsync(identityUser);
+        }
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, identityUser.Id),
+            new("userId", authResult.Value.User.Id.ToString()),
+            new("publicId", authResult.Value.User.PublicId),
+            new(ClaimTypes.Name, authResult.Value.User.DisplayName),
+            new(ClaimTypes.Email, identityUser.Email!)
+        };
+
+        var roles = await _userManager.GetRolesAsync(identityUser);
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var identity = new ClaimsIdentity(claims, AuthScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(AuthScheme, principal, new AuthenticationProperties
+        {
+            IsPersistent = true,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+        });
+
+        TempData["Success"] = $"Welcome, {authResult.Value.User.DisplayName}!";
+
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+
+        return RedirectToAction("Index", "Home", new { area = "Client" });
+    }
+
     [HttpGet]
     public async Task<IActionResult> Logout()
     {
