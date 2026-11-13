@@ -85,6 +85,21 @@ public sealed class ConsultationController : Controller
         return RedirectToAction("Index", "Astrologer", new { area = "Client" });
     }
 
+    [HttpPost("Consultation/SubmitReview")]
+    public async Task<IActionResult> SubmitReview([FromBody] CYHAstro.Core.DTOs.Astrologer.SubmitReviewRequestDto request, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return Unauthorized();
+
+        var res = await _consultationService.SubmitReviewAsync(userId, request, ct);
+        if (res.IsSuccess)
+        {
+            return Ok(new { success = true, message = "Thank you! Your rating and review have been recorded." });
+        }
+
+        return BadRequest(new { success = false, error = res.Error });
+    }
+
     private long GetCurrentUserId()
     {
         var val = User.FindFirstValue("userId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);

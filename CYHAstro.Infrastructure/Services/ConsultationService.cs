@@ -543,4 +543,186 @@ public sealed class ConsultationService : IConsultationService
         var list = (await conn.QueryAsync<ConsultationMessageDto>(sql, new { SessionPublicId = sessionPublicId, Limit = limit })).ToList();
         return Result<IReadOnlyList<ConsultationMessageDto>>.Success(list);
     }
+
+    public async Task<Result<bool>> SubmitReviewAsync(long userId, CYHAstro.Core.DTOs.Astrologer.SubmitReviewRequestDto dto, CancellationToken ct = default)
+    {
+        if (dto.Rating < 1 || dto.Rating > 5)
+        {
+            return Result<bool>.Failure(Result.ErrorCodes.ValidationFailed, "Rating must be between 1 and 5 stars.");
+        }
+
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+
+        const string sqlGetSession = @"
+            SELECT s.Id, s.AstrologerId, s.UserId
+            FROM dbo.ConsultationSessions s
+            WHERE s.PublicId = @PublicId AND s.IsDeleted = 0;
+        ";
+
+        var session = await conn.QuerySingleOrDefaultAsync<dynamic>(sqlGetSession, new { PublicId = dto.SessionPublicId });
+        if (session == null)
+        {
+            return Result<bool>.Failure(Result.ErrorCodes.NotFound, "Consultation session not found.");
+        }
+
+        if ((long)session.UserId != userId)
+        {
+            return Result<bool>.Failure(Result.ErrorCodes.Unauthorized, "Only the consultation client can submit a review.");
+        }
+
+        // Ensure table exists
+        const string sqlEnsureTable = @"
+            IF OBJECT_ID('dbo.AstrologerReviews', 'U') IS NULL
+            BEGIN
+                CREATE TABLE dbo.AstrologerReviews (
+                    Id BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    SessionId BIGINT NOT NULL,
+                    UserId BIGINT NOT NULL,
+                    AstrologerId BIGINT NOT NULL,
+                    Rating INT NOT NULL CHECK (Rating BETWEEN 1 AND 5),
+                    Comment NVARCHAR(1000) NULL,
+                    IsApproved BIT NOT NULL DEFAULT 1,
+                    IsDeleted BIT NOT NULL DEFAULT 0,
+                    CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
+                );
+                CREATE NONCLUSTERED INDEX IX_AstrologerReviews_Astro ON dbo.AstrologerReviews(AstrologerId, IsApproved, CreatedAt DESC);
+            END
+        ";
+        await conn.ExecuteAsync(sqlEnsureTable);
+
+        // Check if already reviewed
+        const string sqlCheck = "SELECT COUNT(1) FROM dbo.AstrologerReviews WHERE SessionId = @SessionId AND UserId = @UserId AND IsDeleted = 0";
+        var count = await conn.ExecuteScalarAsync<int>(sqlCheck, new { SessionId = (long)session.Id, UserId = userId });
+        if (count > 0)
+        {
+            return Result<bool>.Failure(Result.ErrorCodes.Conflict, "Review has already been submitted for this consultation.");
+        }
+
+        // Insert review
+        const string sqlInsert = @"
+            INSERT INTO dbo.AstrologerReviews (SessionId, UserId, AstrologerId, Rating, Comment, IsApproved, IsDeleted, CreatedAt)
+            VALUES (@SessionId, @UserId, @AstrologerId, @Rating, @Comment, 1, 0, GETUTCDATE());
+        ";
+        await conn.ExecuteAsync(sqlInsert, new
+        {
+            SessionId = (long)session.Id,
+            UserId = userId,
+            AstrologerId = (long)session.AstrologerId,
+            Rating = dto.Rating,
+            Comment = dto.ReviewText
+        });
+
+        // Recalculate Astrologer Rating
+        const string sqlUpdateRating = @"
+            UPDATE dbo.Astrologers
+            SET Rating = (SELECT ISNULL(ROUND(AVG(CAST(Rating AS DECIMAL(3,2))), 2), 5.00) FROM dbo.AstrologerReviews WHERE AstrologerId = @AstrologerId AND IsApproved = 1 AND IsDeleted = 0),
+                TotalReviews = (SELECT COUNT(1) FROM dbo.AstrologerReviews WHERE AstrologerId = @AstrologerId AND IsApproved = 1 AND IsDeleted = 0),
+                UpdatedAt = GETUTCDATE()
+            WHERE Id = @AstrologerId;
+        ";
+        await conn.ExecuteAsync(sqlUpdateRating, new { AstrologerId = (long)session.AstrologerId });
+
+        return Result<bool>.Success(true);
+    }
+
+    public async Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetIncomingRequestsForAstrologerAsync(long astrologerUserId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+
+        const string sql = @"
+            SELECT s.*, 
+                   u.DisplayName AS UserName, u.AvatarUrl AS UserAvatar,
+                   a.DisplayName AS AstrologerName, a.ProfilePhotoUrl AS AstrologerPhoto
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE a.UserId = @UserId AND s.Status = 'REQUESTED' AND s.IsDeleted = 0
+            ORDER BY s.CreatedAt DESC;
+        ";
+
+        var rows = await conn.QueryAsync<dynamic>(sql, new { UserId = astrologerUserId });
+        var list = rows.Select(s => new ConsultationResponseDto
+        {
+            SessionId = (long)s.Id,
+            PublicId = (string)s.PublicId,
+            UserId = (long)s.UserId,
+            UserName = (string)s.UserName,
+            AstrologerId = (long)s.AstrologerId,
+            AstrologerName = (string)s.AstrologerName,
+            AstrologerPhoto = (string)s.AstrologerPhoto,
+            SessionType = (string)s.SessionType,
+            Status = (string)s.Status,
+            RatePerMinute = (decimal)s.RatePerMinute,
+            LiveKitRoomName = (string)s.LiveKitRoomName,
+            CreatedAt = (DateTime)s.CreatedAt
+        }).ToList();
+
+        return Result<IReadOnlyList<ConsultationResponseDto>>.Success(list);
+    }
+
+    public async Task<Result<bool>> RejectConsultationAsync(long astrologerUserId, string sessionPublicId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+
+        const string sql = @"
+            UPDATE s
+            SET s.Status = 'CANCELLED',
+                s.EndReason = 'ASTROLOGER_REJECT',
+                s.EndedAt = GETUTCDATE(),
+                s.UpdatedAt = GETUTCDATE()
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE s.PublicId = @PublicId AND a.UserId = @UserId AND s.Status = 'REQUESTED';
+        ";
+
+        var rows = await conn.ExecuteAsync(sql, new { PublicId = sessionPublicId, UserId = astrologerUserId });
+        if (rows == 0)
+        {
+            return Result<bool>.Failure(Result.ErrorCodes.NotFound, "Pending consultation request not found or unauthorized.");
+        }
+
+        return Result<bool>.Success(true);
+    }
+
+    public async Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetAstrologerSessionsAsync(long astrologerUserId, string? status = null, int limit = 50, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+
+        var sql = @"
+            SELECT TOP (@Limit) s.*, 
+                   u.DisplayName AS UserName, u.AvatarUrl AS UserAvatar,
+                   a.DisplayName AS AstrologerName, a.ProfilePhotoUrl AS AstrologerPhoto
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE a.UserId = @UserId AND s.IsDeleted = 0";
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            sql += " AND s.Status = @Status";
+        }
+
+        sql += " ORDER BY s.CreatedAt DESC;";
+
+        var rows = await conn.QueryAsync<dynamic>(sql, new { UserId = astrologerUserId, Status = status, Limit = limit });
+        var list = rows.Select(s => new ConsultationResponseDto
+        {
+            SessionId = (long)s.Id,
+            PublicId = (string)s.PublicId,
+            UserId = (long)s.UserId,
+            UserName = (string)s.UserName,
+            AstrologerId = (long)s.AstrologerId,
+            AstrologerName = (string)s.AstrologerName,
+            AstrologerPhoto = (string)s.AstrologerPhoto,
+            SessionType = (string)s.SessionType,
+            Status = (string)s.Status,
+            RatePerMinute = (decimal)s.RatePerMinute,
+            LiveKitRoomName = (string)s.LiveKitRoomName,
+            DurationSeconds = s.DurationSeconds != null ? (int)s.DurationSeconds : 0,
+            ConnectedAt = s.ConnectedAt != null ? (DateTime)s.ConnectedAt : null,
+            CreatedAt = (DateTime)s.CreatedAt
+        }).ToList();
+
+        return Result<IReadOnlyList<ConsultationResponseDto>>.Success(list);
+    }
 }

@@ -72,6 +72,47 @@ public sealed class WalletController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost("Wallet/CreateOrder")]
+    public async Task<IActionResult> CreateOrder([FromBody] CreateRechargeOrderRequestDto request, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return Unauthorized();
+
+        var res = await _walletService.CreateRechargeOrderAsync(userId, request, ct);
+        if (res.IsSuccess)
+        {
+            return Ok(res.Value);
+        }
+        return BadRequest(new { error = res.Error });
+    }
+
+    [HttpPost("Wallet/VerifyPayment")]
+    public async Task<IActionResult> VerifyPayment([FromBody] VerifyPaymentRequestDto request, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return Unauthorized();
+
+        var res = await _walletService.VerifyPaymentAsync(userId, request, ct);
+        if (res.IsSuccess)
+        {
+            return Ok(res.Value);
+        }
+        return BadRequest(new { error = res.Error });
+    }
+
+    [HttpPost("Wallet/Webhook")]
+    [AllowAnonymous]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> Webhook(CancellationToken ct)
+    {
+        using var reader = new StreamReader(Request.Body);
+        var body = await reader.ReadToEndAsync(ct);
+        var signature = Request.Headers["X-Razorpay-Signature"].ToString();
+
+        _logger.LogInformation("Received Razorpay Webhook. Payload length: {Length}", body.Length);
+        return Ok(new { received = true });
+    }
+
     private long GetCurrentUserId()
     {
         var val = User.FindFirstValue("userId");

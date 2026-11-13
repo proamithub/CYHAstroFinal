@@ -1,0 +1,296 @@
+@model CYHAstro.Core.DTOs.Astrologer.AstrologerDashboardDto
+@{
+    ViewData["Title"] = "Astrologer Dashboard";
+}
+
+<div class="row g-4 mb-4">
+    <!-- Astrologer Welcome & Status Hero -->
+    <div class="col-12">
+        <div class="cosmic-card p-4 p-md-5 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-4">
+                <img src="@(string.IsNullOrEmpty(Model.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200" : Model.ProfilePhotoUrl)"
+                     alt="@Model.DisplayName" class="rounded-circle border border-warning shadow" style="width: 75px; height: 75px; object-fit: cover;" />
+                <div>
+                    <span class="badge bg-warning text-dark fw-bold mb-1">VERIFIED EXPERT JYOTISH</span>
+                    <h3 class="fw-bold text-white brand-font mb-0">Namaste, @Model.DisplayName</h3>
+                    <span class="text-secondary small">
+                        Rates: Chat ₹@Model.ChatRatePerMinute/min | Audio ₹@Model.AudioRatePerMinute/min | Video ₹@Model.VideoRatePerMinute/min
+                    </span>
+                </div>
+            </div>
+
+            <!-- Big Availability Toggle Button -->
+            <div class="d-flex align-items-center gap-3 bg-black bg-opacity-50 p-3 rounded-4 border border-secondary border-opacity-25">
+                <div class="text-end">
+                    <span class="d-block small text-secondary">Consultation Queue Status</span>
+                    <strong class="fs-5 @(Model.IsAvailable ? "text-success" : "text-danger")" id="heroStatusText">
+                        @(Model.IsAvailable ? "ONLINE & RECEIVING CALLS" : "OFFLINE")
+                    </strong>
+                </div>
+                <button type="button" class="btn @(Model.IsAvailable ? "btn-outline-danger" : "btn-gold") px-4 py-2 fw-bold"
+                        id="heroToggleBtn" onclick="toggleHeroAvailability()">
+                    @(Model.IsAvailable ? "Go Offline" : "Go Online Now")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="col-md-6 col-xl-3">
+        <div class="cosmic-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-secondary small text-uppercase">Today's Earnings</span>
+                <span class="badge bg-success bg-opacity-25 text-success"><i class="fa-solid fa-indian-rupee-sign"></i> Today</span>
+            </div>
+            <h2 class="fw-bold text-white mb-1">₹@Model.TodayEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">Net astrologer take-home</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="cosmic-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-secondary small text-uppercase">Total Earnings</span>
+                <span class="badge bg-warning bg-opacity-25 text-warning"><i class="fa-solid fa-vault"></i> Lifetime</span>
+            </div>
+            <h2 class="fw-bold text-warning mb-1">₹@Model.TotalEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">Accrued across all sessions</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="cosmic-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-secondary small text-uppercase">Consultations Done</span>
+                <span class="badge bg-info bg-opacity-25 text-info"><i class="fa-solid fa-handshake"></i> Total</span>
+            </div>
+            <h2 class="fw-bold text-white mb-1">@Model.TotalConsultations</h2>
+            <span class="text-secondary small">Happy seekers counseled</span>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="cosmic-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="text-secondary small text-uppercase">Client Rating</span>
+                <span class="badge bg-warning text-dark fw-bold"><i class="fa-solid fa-star"></i> Verified</span>
+            </div>
+            <h2 class="fw-bold text-warning mb-1">
+                @Model.Rating.ToString("F2") <span class="fs-6 text-secondary fw-normal">/ 5.0</span>
+            </h2>
+            <span class="text-secondary small">Based on reviews</span>
+        </div>
+    </div>
+</div>
+
+<!-- Incoming Consultation Requests Section -->
+<div class="card cosmic-card p-4 mb-4 border-warning border-opacity-50">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
+            <h5 class="fw-bold text-white brand-font mb-0">Incoming Consultation Requests</h5>
+            <span class="badge bg-warning text-dark fw-bold ms-2" id="incomingBadge">@Model.IncomingRequests.Count</span>
+        </div>
+        <span class="small text-secondary" id="lastPollText">Listening live...</span>
+    </div>
+
+    <div id="incomingContainer">
+        @if (Model.IncomingRequests.Any())
+        {
+            <div class="row g-3">
+                @foreach (var req in Model.IncomingRequests)
+                {
+                    <div class="col-md-6 col-xl-4">
+                        <div class="p-3 rounded-4 bg-dark border border-warning border-opacity-50 h-100 d-flex flex-column justify-content-between shadow-lg">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-warning text-dark fw-bold">@req.SessionType REQUEST</span>
+                                    <span class="text-secondary small font-monospace">₹@req.RatePerMinute.ToString("F2")/min</span>
+                                </div>
+                                <h5 class="text-white fw-bold mb-1">
+                                    <i class="fa-solid fa-user-circle text-warning me-1"></i> @req.UserName
+                                </h5>
+                                <p class="text-secondary small mb-3">Seeker is in queue waiting to begin consultation.</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a asp-controller="Consultation" asp-action="Accept" asp-route-id="@req.PublicId"
+                                   class="btn btn-success fw-bold flex-grow-1">
+                                    <i class="fa-solid fa-phone me-1"></i> Accept & Join
+                                </a>
+                                <form asp-controller="Consultation" asp-action="Reject" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="sessionPublicId" value="@req.PublicId" />
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-secondary">
+                <i class="fa-solid fa-headphones-simple fs-2 text-warning mb-2 opacity-50 d-block"></i>
+                <span>No pending consultation requests at this moment. Stay online to receive incoming seeker calls.</span>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Recent Completed Consultations Table -->
+<div class="cosmic-card p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold text-white brand-font mb-0">
+            <i class="fa-solid fa-clock-rotate-left text-warning me-2"></i> Recent Consultation History
+        </h5>
+        <a asp-controller="Earnings" asp-action="Index" class="btn btn-outline-warning btn-sm">
+            View All & Payouts <i class="fa-solid fa-chevron-right ms-1"></i>
+        </a>
+    </div>
+
+    @if (Model.RecentSessions.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 small">
+                <thead>
+                    <tr class="text-secondary border-secondary">
+                        <th>Date & Time</th>
+                        <th>Seeker Name</th>
+                        <th>Type</th>
+                        <th>Duration</th>
+                        <th>Rate</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.RecentSessions)
+                    {
+                        <tr>
+                            <td>@s.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</td>
+                            <td class="text-white fw-bold">@s.UserName</td>
+                            <td>
+                                <span class="badge @(s.SessionType == "VIDEO" ? "bg-primary" : s.SessionType == "AUDIO" ? "bg-info text-dark" : "bg-warning text-dark")">
+                                    @s.SessionType
+                                </span>
+                            </td>
+                            <td>@(s.DurationSeconds / 60)m @(s.DurationSeconds % 60)s</td>
+                            <td>₹@s.RatePerMinute.ToString("F2")/m</td>
+                            <td>
+                                <span class="badge @(s.Status == "ACTIVE" ? "bg-success" : "bg-secondary")">
+                                    @s.Status
+                                </span>
+                            </td>
+                            <td>
+                                @if (s.Status == "ACTIVE" || s.Status == "REQUESTED")
+                                {
+                                    <a asp-controller="Consultation" asp-action="Room" asp-route-id="@s.PublicId" class="btn btn-sm btn-gold py-0 px-2">
+                                        Rejoin
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-secondary small">Completed</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-4 text-secondary small">
+            No consultations recorded yet.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        let isOnline = @(Model.IsAvailable ? "true" : "false");
+
+        // Sync initial state to nav switch
+        document.addEventListener("DOMContentLoaded", () => {
+            const navSwitch = document.getElementById("navAvailabilitySwitch");
+            const navLabel = document.getElementById("navAvailabilityLabel");
+            if (navSwitch) {
+                navSwitch.checked = isOnline;
+                navLabel.innerText = isOnline ? "Online" : "Offline";
+                navLabel.className = isOnline ? "form-check-label small fw-bold text-success" : "form-check-label small fw-bold text-secondary";
+            }
+        });
+
+        async function toggleHeroAvailability() {
+            isOnline = !isOnline;
+            const heroText = document.getElementById("heroStatusText");
+            const heroBtn = document.getElementById("heroToggleBtn");
+            const navSwitch = document.getElementById("navAvailabilitySwitch");
+            const navLabel = document.getElementById("navAvailabilityLabel");
+
+            heroText.innerText = isOnline ? "ONLINE & RECEIVING CALLS" : "OFFLINE";
+            heroText.className = isOnline ? "fs-5 text-success" : "fs-5 text-danger";
+            heroBtn.innerText = isOnline ? "Go Offline" : "Go Online Now";
+            heroBtn.className = isOnline ? "btn btn-outline-danger px-4 py-2 fw-bold" : "btn btn-gold px-4 py-2 fw-bold";
+
+            if (navSwitch) {
+                navSwitch.checked = isOnline;
+                navLabel.innerText = isOnline ? "Online" : "Offline";
+                navLabel.className = isOnline ? "form-check-label small fw-bold text-success" : "form-check-label small fw-bold text-secondary";
+            }
+
+            try {
+                await fetch("/Astrologer/Home/ToggleAvailability", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isAvailable: isOnline })
+                });
+            } catch (e) {
+                console.error("Availability update error:", e);
+            }
+        }
+
+        // Live Poll for incoming requests
+        let knownRequestIds = new Set([@string.Join(",", Model.IncomingRequests.Select(r => $"'{r.PublicId}'"))]);
+
+        setInterval(async () => {
+            try {
+                const res = await fetch("/Astrologer/Home/GetPendingRequests");
+                if (!res.ok) return;
+                const requests = await res.json();
+
+                document.getElementById("incomingBadge").innerText = requests.length;
+
+                // Check for new requests
+                let hasNew = false;
+                requests.forEach(r => {
+                    if (!knownRequestIds.has(r.publicId)) {
+                        knownRequestIds.add(r.publicId);
+                        hasNew = true;
+                    }
+                });
+
+                if (hasNew) {
+                    playAlertTone();
+                    // Show Toast
+                    const firstNew = requests[0];
+                    if (firstNew) {
+                        document.getElementById("toastMessage").innerText = `${firstNew.userName} is requesting a ${firstNew.sessionType} consultation (₹${firstNew.ratePerMinute.toFixed(2)}/min).`;
+                        document.getElementById("toastAcceptBtn").href = `/Astrologer/Consultation/Accept/${firstNew.publicId}`;
+                        const toastEl = document.getElementById("incomingToast");
+                        const toast = new bootstrap.Toast(toastEl);
+                        toast.show();
+                    }
+                    // Refresh incoming container HTML
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.log("Poll error:", err);
+            }
+        }, 5000);
+    </script>
+}

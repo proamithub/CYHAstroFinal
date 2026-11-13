@@ -184,6 +184,182 @@ public sealed class AstrologerService : IAstrologerService
         return result;
     }
 
+    public async Task<Result<AstrologerListingDto?>> GetAstrologerByUserIdAsync(long userId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        const string sql = "SELECT * FROM dbo.Astrologers WHERE UserId = @UserId AND IsDeleted = 0";
+        var astro = await conn.QuerySingleOrDefaultAsync<Astrologer>(sql, new { UserId = userId });
+        if (astro == null)
+        {
+            return Result<AstrologerListingDto?>.Success(null);
+        }
+        return Result<AstrologerListingDto?>.Success(MapToListingDto(astro));
+    }
+
+    public async Task<Result<AstrologerDashboardDto>> GetDashboardAsync(long userId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        const string sqlAstro = "SELECT * FROM dbo.Astrologers WHERE UserId = @UserId AND IsDeleted = 0";
+        var astro = await conn.QuerySingleOrDefaultAsync<Astrologer>(sqlAstro, new { UserId = userId });
+        if (astro == null)
+        {
+            return Result<AstrologerDashboardDto>.Failure("Astrologer profile not found.", Result.ErrorCodes.NotFound);
+        }
+
+        // Today's Earnings & Total Earnings
+        const string sqlEarnings = @"
+            SELECT 
+                ISNULL(SUM(CASE WHEN CAST(CreatedAt AS DATE) = CAST(GETUTCDATE() AS DATE) THEN Amount ELSE 0 END), 0) AS TodayEarnings,
+                ISNULL(SUM(Amount), 0) AS TotalEarnings
+            FROM dbo.AstrologerEarnings
+            WHERE AstrologerId = @AstrologerId";
+        var earnings = await conn.QuerySingleOrDefaultAsync<dynamic>(sqlEarnings, new { AstrologerId = astro.Id });
+
+        // Incoming / Pending Requests
+        const string sqlIncoming = @"
+            SELECT s.*, 
+                   u.DisplayName AS UserName, u.AvatarUrl AS UserAvatar,
+                   a.DisplayName AS AstrologerName, a.ProfilePhotoUrl AS AstrologerPhoto
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE s.AstrologerId = @AstrologerId AND s.Status = 'REQUESTED' AND s.IsDeleted = 0
+            ORDER BY s.CreatedAt DESC";
+        var incomingRows = await conn.QueryAsync<dynamic>(sqlIncoming, new { AstrologerId = astro.Id });
+
+        var incomingList = incomingRows.Select(s => new CYHAstro.Core.DTOs.Consultation.ConsultationResponseDto
+        {
+            SessionId = (long)s.Id,
+            PublicId = (string)s.PublicId,
+            UserId = (long)s.UserId,
+            UserName = (string)s.UserName,
+            AstrologerId = (long)s.AstrologerId,
+            AstrologerName = (string)s.AstrologerName,
+            AstrologerPhoto = (string)s.AstrologerPhoto,
+            SessionType = (string)s.SessionType,
+            Status = (string)s.Status,
+            RatePerMinute = (decimal)s.RatePerMinute,
+            LiveKitRoomName = (string)s.LiveKitRoomName,
+            CreatedAt = (DateTime)s.CreatedAt
+        }).ToList();
+
+        // Recent Sessions
+        const string sqlRecent = @"
+            SELECT TOP 15 s.*, 
+                   u.DisplayName AS UserName, u.AvatarUrl AS UserAvatar,
+                   a.DisplayName AS AstrologerName, a.ProfilePhotoUrl AS AstrologerPhoto
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE s.AstrologerId = @AstrologerId AND s.Status IN ('ACTIVE', 'COMPLETED', 'ENDED', 'BILLED') AND s.IsDeleted = 0
+            ORDER BY s.CreatedAt DESC";
+        var recentRows = await conn.QueryAsync<dynamic>(sqlRecent, new { AstrologerId = astro.Id });
+
+        var recentList = recentRows.Select(s => new CYHAstro.Core.DTOs.Consultation.ConsultationResponseDto
+        {
+            SessionId = (long)s.Id,
+            PublicId = (string)s.PublicId,
+            UserId = (long)s.UserId,
+            UserName = (string)s.UserName,
+            AstrologerId = (long)s.AstrologerId,
+            AstrologerName = (string)s.AstrologerName,
+            AstrologerPhoto = (string)s.AstrologerPhoto,
+            SessionType = (string)s.SessionType,
+            Status = (string)s.Status,
+            RatePerMinute = (decimal)s.RatePerMinute,
+            LiveKitRoomName = (string)s.LiveKitRoomName,
+            DurationSeconds = s.DurationSeconds != null ? (int)s.DurationSeconds : 0,
+            CreatedAt = (DateTime)s.CreatedAt
+        }).ToList();
+
+        var dto = new AstrologerDashboardDto
+        {
+            AstrologerId = astro.Id,
+            PublicId = astro.PublicId,
+            DisplayName = astro.DisplayName,
+            ProfilePhotoUrl = astro.ProfilePhotoUrl,
+            IsAvailable = astro.IsAvailable,
+            Rating = astro.Rating,
+            TotalReviews = astro.Rating > 0 ? 50 : 0,
+            TotalConsultations = astro.TotalConsultations,
+            TodayEarnings = earnings != null ? (decimal)earnings.TodayEarnings : 0m,
+            TotalEarnings = earnings != null ? (decimal)earnings.TotalEarnings : 0m,
+            ChatRatePerMinute = astro.ChatRatePerMinute,
+            AudioRatePerMinute = astro.AudioRatePerMinute,
+            VideoRatePerMinute = astro.VideoRatePerMinute,
+            PendingRequestsCount = incomingList.Count,
+            IncomingRequests = incomingList,
+            RecentSessions = recentList
+        };
+
+        return Result<AstrologerDashboardDto>.Success(dto);
+    }
+
+    public async Task<Result> UpdateProfileAsync(long userId, UpdateAstrologerProfileDto dto, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        const string sql = @"
+            UPDATE dbo.Astrologers
+            SET DisplayName = @DisplayName,
+                Bio = @Bio,
+                Specializations = @Specializations,
+                Languages = @Languages,
+                ChatRatePerMinute = @ChatRatePerMinute,
+                AudioRatePerMinute = @AudioRatePerMinute,
+                VideoRatePerMinute = @VideoRatePerMinute,
+                ExperienceYears = @ExperienceYears,
+                ProfilePhotoUrl = COALESCE(@ProfilePhotoUrl, ProfilePhotoUrl),
+                UpdatedAt = GETUTCDATE()
+            WHERE UserId = @UserId AND IsDeleted = 0";
+
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            dto.DisplayName,
+            dto.Bio,
+            dto.Specializations,
+            dto.Languages,
+            dto.ChatRatePerMinute,
+            dto.AudioRatePerMinute,
+            dto.VideoRatePerMinute,
+            dto.ExperienceYears,
+            dto.ProfilePhotoUrl,
+            UserId = userId
+        });
+
+        if (rows == 0)
+        {
+            return Result.Failure("Astrologer profile not found.", Result.ErrorCodes.NotFound);
+        }
+
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<AstrologerEarningItemDto>>> GetEarningsHistoryAsync(long userId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        const string sql = @"
+            SELECT 
+                ae.Id,
+                s.PublicId AS SessionPublicId,
+                u.DisplayName AS ClientName,
+                s.SessionType,
+                s.DurationSeconds,
+                s.TotalCharge AS GrossAmount,
+                ISNULL(pc.CommissionAmount, 0) AS CommissionDeducted,
+                ae.Amount AS NetEarning,
+                ae.CreatedAt
+            FROM dbo.AstrologerEarnings ae
+            JOIN dbo.ConsultationSessions s ON s.Id = ae.SessionId
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = ae.AstrologerId
+            LEFT JOIN dbo.PlatformCommissions pc ON pc.SessionId = s.Id
+            WHERE a.UserId = @UserId
+            ORDER BY ae.CreatedAt DESC";
+
+        var list = (await conn.QueryAsync<AstrologerEarningItemDto>(sql, new { UserId = userId })).ToList();
+        return Result<IReadOnlyList<AstrologerEarningItemDto>>.Success(list);
+    }
+
     private static AstrologerListingDto MapToListingDto(Astrologer a) => new()
     {
         Id = a.Id,

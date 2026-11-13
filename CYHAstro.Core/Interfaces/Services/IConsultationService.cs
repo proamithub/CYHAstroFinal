@@ -13,4 +13,8 @@ public interface IConsultationService
     Task<Result<string>> GetLiveKitTokenAsync(long userId, string sessionPublicId, CancellationToken ct = default);
     Task<Result<ConsultationMessageDto>> SaveMessageAsync(long senderUserId, string sessionPublicId, string message, CancellationToken ct = default);
     Task<Result<IReadOnlyList<ConsultationMessageDto>>> GetMessagesAsync(string sessionPublicId, int limit = 100, CancellationToken ct = default);
+    Task<Result<bool>> SubmitReviewAsync(long userId, CYHAstro.Core.DTOs.Astrologer.SubmitReviewRequestDto dto, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetIncomingRequestsForAstrologerAsync(long astrologerUserId, CancellationToken ct = default);
+    Task<Result<bool>> RejectConsultationAsync(long astrologerUserId, string sessionPublicId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetAstrologerSessionsAsync(long astrologerUserId, string? status = null, int limit = 50, CancellationToken ct = default);
 }

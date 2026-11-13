@@ -165,6 +165,48 @@
     </div>
 </div>
 
+<!-- Modal: Post-Consultation Rating & Review -->
+<div class="modal fade" id="reviewModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-warning border-opacity-50 text-light rounded-4 shadow-lg">
+            <div class="modal-header border-secondary border-opacity-25 bg-black bg-opacity-25">
+                <h5 class="modal-title text-warning fw-bold">
+                    <i class="fa-solid fa-star text-warning me-2"></i>Rate Your Consultation
+                </h5>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <img src="@(string.IsNullOrEmpty(Model.AstrologerPhoto) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=150" : Model.AstrologerPhoto)"
+                     alt="@Model.AstrologerName" class="rounded-circle border border-warning shadow mb-2" style="width: 70px; height: 70px; object-fit: cover;" />
+                <h5 class="text-white fw-bold mb-1">@Model.AstrologerName</h5>
+                <span class="text-secondary small d-block mb-3" id="reviewSummaryText">Consultation Ended</span>
+
+                <div class="mb-3">
+                    <label class="form-label small text-secondary d-block">How was your astrological guidance experience?</label>
+                    <div class="d-flex justify-content-center gap-2 fs-2 text-secondary" id="starContainer">
+                        <i class="fa-solid fa-star star-btn" data-value="1" onclick="setRating(1)" style="cursor: pointer;"></i>
+                        <i class="fa-solid fa-star star-btn" data-value="2" onclick="setRating(2)" style="cursor: pointer;"></i>
+                        <i class="fa-solid fa-star star-btn" data-value="3" onclick="setRating(3)" style="cursor: pointer;"></i>
+                        <i class="fa-solid fa-star star-btn" data-value="4" onclick="setRating(4)" style="cursor: pointer;"></i>
+                        <i class="fa-solid fa-star star-btn" data-value="5" onclick="setRating(5)" style="cursor: pointer; color: #e5a93b;"></i>
+                    </div>
+                </div>
+
+                <div class="mb-3 text-start">
+                    <label class="form-label small text-secondary">Feedback / Testimonial (Optional)</label>
+                    <textarea id="reviewComment" rows="3" class="form-control bg-black text-light border-secondary"
+                              placeholder="Write a few words about how Acharya's insights helped you..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary border-opacity-25 justify-content-between">
+                <a href="/Astrologer" class="btn btn-outline-secondary btn-sm">Skip</a>
+                <button type="button" class="btn btn-gold px-4 fw-bold" onclick="submitReview()">
+                    Submit Review <i class="fa-solid fa-paper-plane ms-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <!-- SignalR Client Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
@@ -220,9 +262,44 @@
             if (elem) elem.style.display = data.isTyping ? "block" : "none";
         });
 
-        connection.on("SessionEnded", function (data) {
-            alert(`Consultation ended. Duration: ${data.durationSeconds}s. Billed: ₹${data.totalCharge.toFixed(2)}`);
+        let selectedRating = 5;
+        function setRating(val) {
+            selectedRating = val;
+            const stars = document.querySelectorAll(".star-btn");
+            stars.forEach(s => {
+                const sVal = parseInt(s.getAttribute("data-value"));
+                s.style.color = sVal <= val ? "#e5a93b" : "#6c757d";
+            });
+        }
+
+        async function submitReview() {
+            const comment = document.getElementById("reviewComment").value.trim();
+            try {
+                const resp = await fetch("/Consultation/SubmitReview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sessionPublicId: sessionPublicId,
+                        rating: selectedRating,
+                        reviewText: comment
+                    })
+                });
+                const resData = await resp.json();
+                if (resp.ok) {
+                    alert("Thank you for your valuable feedback!");
+                }
+            } catch (e) {
+                console.error("Review submission error:", e);
+            }
             window.location.href = "/Astrologer";
+        }
+
+        connection.on("SessionEnded", function (data) {
+            clearInterval(timerInterval);
+            document.getElementById("reviewSummaryText").innerText = 
+                `Duration: ${Math.floor(data.durationSeconds / 60)}m ${data.durationSeconds % 60}s | Billed: ₹${data.totalCharge.toFixed(2)}`;
+            const revModal = new bootstrap.Modal(document.getElementById("reviewModal"));
+            revModal.show();
         });
 
         connection.start()

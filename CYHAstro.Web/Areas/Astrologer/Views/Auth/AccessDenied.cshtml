@@ -1,0 +1,16 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+<div class="container py-5 text-center">
+    <div class="cosmic-card p-5 mx-auto" style="max-width: 500px;">
+        <i class="fa-solid fa-ban text-danger display-3 mb-3"></i>
+        <h3 class="text-white fw-bold brand-font mb-2">Access Denied</h3>
+        <p class="text-secondary small mb-4">
+            Your account is not authorized as an approved Astrologer on CYHAstro. If you recently applied, please wait for admin verification.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <a asp-action="Login" class="btn btn-gold px-4">Login as Astrologer</a>
+            <a href="/" class="btn btn-outline-secondary px-4">Back to Home</a>
+        </div>
+    </div>
+</div>

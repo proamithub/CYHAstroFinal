@@ -15,4 +15,8 @@ public interface IAstrologerService
     Task<Result<IReadOnlyList<string>>> GetLanguagesAsync(CancellationToken ct = default);
 
     Task<Result> SetAvailabilityAsync(long astrologerId, bool isAvailable, CancellationToken ct = default);
+    Task<Result<AstrologerDashboardDto>> GetDashboardAsync(long userId, CancellationToken ct = default);
+    Task<Result<AstrologerListingDto?>> GetAstrologerByUserIdAsync(long userId, CancellationToken ct = default);
+    Task<Result> UpdateProfileAsync(long userId, UpdateAstrologerProfileDto dto, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<AstrologerEarningItemDto>>> GetEarningsHistoryAsync(long userId, CancellationToken ct = default);
 }

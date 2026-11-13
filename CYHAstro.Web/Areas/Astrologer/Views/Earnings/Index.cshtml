@@ -1,0 +1,85 @@
+@model IReadOnlyList<CYHAstro.Core.DTOs.Astrologer.AstrologerEarningItemDto>
+@{
+    ViewData["Title"] = "Earnings & Payout Ledger";
+    var dash = ViewBag.Dashboard as CYHAstro.Core.DTOs.Astrologer.AstrologerDashboardDto ?? new CYHAstro.Core.DTOs.Astrologer.AstrologerDashboardDto();
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="cosmic-card p-4">
+            <span class="text-secondary small text-uppercase d-block mb-1">Today's Net Earnings</span>
+            <h2 class="fw-bold text-success mb-0">₹@dash.TodayEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">Credited today</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cosmic-card p-4">
+            <span class="text-secondary small text-uppercase d-block mb-1">Total Lifetime Net Earnings</span>
+            <h2 class="fw-bold text-warning mb-0">₹@dash.TotalEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">Across all consultations</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cosmic-card p-4">
+            <span class="text-secondary small text-uppercase d-block mb-1">Total Sessions Completed</span>
+            <h2 class="fw-bold text-white mb-0">@dash.TotalConsultations</h2>
+            <span class="text-secondary small">Average rating: ⭐ @dash.Rating.ToString("F2")</span>
+        </div>
+    </div>
+</div>
+
+<div class="cosmic-card p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold text-white brand-font mb-1">Consultation Earnings Ledger</h4>
+            <span class="text-secondary small">Detailed audit trail of all completed consultations, platform fees, and net take-home</span>
+        </div>
+        <span class="badge bg-dark border border-secondary text-secondary">Immutable Record</span>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 small">
+                <thead>
+                    <tr class="text-secondary border-secondary">
+                        <th>Date & Time</th>
+                        <th>Session Public ID</th>
+                        <th>Seeker Name</th>
+                        <th>Type</th>
+                        <th>Duration</th>
+                        <th>Gross Charge</th>
+                        <th>Platform Fee</th>
+                        <th>Net Earning</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model)
+                    {
+                        <tr>
+                            <td>@e.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</td>
+                            <td class="font-monospace text-warning">@e.SessionPublicId</td>
+                            <td class="text-white fw-bold">@e.ClientName</td>
+                            <td>
+                                <span class="badge @(e.SessionType == "VIDEO" ? "bg-primary" : e.SessionType == "AUDIO" ? "bg-info text-dark" : "bg-warning text-dark")">
+                                    @e.SessionType
+                                </span>
+                            </td>
+                            <td>@(e.DurationSeconds / 60)m @(e.DurationSeconds % 60)s</td>
+                            <td class="text-light">₹@e.GrossAmount.ToString("F2")</td>
+                            <td class="text-danger">- ₹@e.CommissionDeducted.ToString("F2")</td>
+                            <td class="text-success fw-bold">₹@e.NetEarning.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5 text-secondary">
+            <i class="fa-solid fa-receipt fs-2 text-warning mb-2 opacity-50 d-block"></i>
+            <span>No consultation earnings logged yet. As seekers consult with you, earnings appear here automatically.</span>
+        </div>
+    }
+</div>

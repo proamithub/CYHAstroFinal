@@ -1,0 +1,95 @@
+@model CYHAstro.Core.DTOs.Astrologer.UpdateAstrologerProfileDto
+@{
+    ViewData["Title"] = "Astrologer Profile & Rates";
+    var listing = ViewBag.AstrologerListing as CYHAstro.Core.DTOs.Astrologer.AstrologerListingDto;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="cosmic-card p-4 p-md-5">
+            <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                <img src="@(string.IsNullOrEmpty(Model.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200" : Model.ProfilePhotoUrl)"
+                     alt="@Model.DisplayName" class="rounded-circle border border-warning shadow" style="width: 70px; height: 70px; object-fit: cover;" />
+                <div>
+                    <h4 class="fw-bold text-white brand-font mb-1">Edit Astrologer Profile</h4>
+                    <span class="text-secondary small">Update your consultation pricing, specialties, and bio shown to seekers</span>
+                </div>
+            </div>
+
+            <form asp-action="Update" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label small text-secondary">Full Display Name</label>
+                        <input type="text" asp-for="DisplayName" class="form-control bg-dark border-secondary text-light" required />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-secondary">Experience (Years)</label>
+                        <input type="number" asp-for="ExperienceYears" class="form-control bg-dark border-secondary text-light" required min="1" max="60" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-secondary">Avatar Photo URL</label>
+                        <input type="url" asp-for="ProfilePhotoUrl" class="form-control bg-dark border-secondary text-light" placeholder="https://..." />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-secondary">Specializations (Comma separated)</label>
+                        <input type="text" asp-for="Specializations" class="form-control bg-dark border-secondary text-light"
+                               placeholder="Vedic Astrology, Kundli Matching, Vastu Shastra" required />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-secondary">Languages Spoken (Comma separated)</label>
+                        <input type="text" asp-for="Languages" class="form-control bg-dark border-secondary text-light"
+                               placeholder="Hindi, English, Sanskrit" required />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small text-secondary">Astrological Bio & Credentials</label>
+                        <textarea asp-for="Bio" rows="4" class="form-control bg-dark border-secondary text-light"
+                                  placeholder="Describe your lineage, Jyotish education, awards, and areas of expertise..." required></textarea>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-4 bg-black bg-opacity-50 border border-warning border-opacity-40 mb-4">
+                    <h6 class="fw-bold text-warning brand-font mb-3">
+                        <i class="fa-solid fa-coins me-2"></i> Per-Minute Consultation Pricing (INR ₹)
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-secondary">Chat Rate (₹/min)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-warning">₹</span>
+                                <input type="number" step="0.50" asp-for="ChatRatePerMinute" class="form-control bg-dark border-secondary text-light fw-bold" required min="1" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-secondary">Audio Call Rate (₹/min)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-info">₹</span>
+                                <input type="number" step="0.50" asp-for="AudioRatePerMinute" class="form-control bg-dark border-secondary text-light fw-bold" required min="1" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-secondary">Video Call Rate (₹/min)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-success">₹</span>
+                                <input type="number" step="0.50" asp-for="VideoRatePerMinute" class="form-control bg-dark border-secondary text-light fw-bold" required min="1" />
+                            </div>
+                        </div>
+                    </div>
+                    <span class="d-block small text-secondary mt-2">
+                        Note: Platform retains 20% commission on gross billings. You receive 80% net credited directly to your earnings balance.
+                    </span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-3">
+                    <a asp-action="Index" asp-controller="Home" class="btn btn-secondary px-4">Cancel</a>
+                    <button type="submit" class="btn btn-gold px-5 fw-bold">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

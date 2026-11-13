@@ -71,8 +71,8 @@
                                         </div>
                                     </div>
 
-                                    <button type="submit" class="btn btn-gold btn-sm w-100 fw-bold">
-                                        Recharge
+                                    <button type="button" class="btn btn-gold btn-sm w-100 fw-bold" onclick="initiatePayment(@pkg.Id, this)">
+                                        Recharge Now
                                     </button>
                                 </div>
                             </form>
@@ -143,3 +143,84 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <!-- Razorpay Standard Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        async function initiatePayment(packageId, btn) {
+            const form = btn.closest("form");
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Preparing...';
+
+            try {
+                const resp = await fetch("/Wallet/CreateOrder", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ packageId: packageId, paymentGateway: "Razorpay" })
+                });
+
+                if (!resp.ok) {
+                    // Fall back to direct form submit for testing
+                    form.submit();
+                    return;
+                }
+
+                const order = await resp.json();
+
+                // If no real Razorpay key configured or in placeholder mode, submit form
+                if (!order.gatewayKey || order.gatewayKey.includes("placeholder") || typeof Razorpay === "undefined") {
+                    form.submit();
+                    return;
+                }
+
+                // Launch real Razorpay modal
+                const options = {
+                    key: order.gatewayKey,
+                    amount: Math.round(order.amount * 100), // in paise
+                    currency: order.currency || "INR",
+                    name: "CYHAstro Jyotish",
+                    description: "Astrology Wallet Recharge",
+                    order_id: order.gatewayOrderId,
+                    handler: async function (response) {
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying...';
+                        const verifyResp = await fetch("/Wallet/VerifyPayment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                paymentPublicId: order.paymentPublicId,
+                                gatewayOrderId: response.razorpay_order_id,
+                                gatewayPaymentId: response.razorpay_payment_id,
+                                gatewaySignature: response.razorpay_signature
+                            })
+                        });
+
+                        if (verifyResp.ok) {
+                            alert("Payment verified successfully! Your wallet balance has been updated.");
+                            window.location.reload();
+                        } else {
+                            alert("Payment verification issue. Please check your transaction history.");
+                            window.location.reload();
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            btn.disabled = false;
+                            btn.innerHTML = 'Recharge Now';
+                        }
+                    },
+                    theme: {
+                        color: "#e5a93b"
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } catch (err) {
+                console.error("Payment init error:", err);
+                form.submit();
+            }
+        }
+    </script>
+}

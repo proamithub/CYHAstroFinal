@@ -55,6 +55,18 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+})
+.AddCookie("AstrologerCookie", options =>
+{
+    options.Cookie.Name = "CYHAstro.AstrologerSession";
+    options.LoginPath = "/Astrologer/Auth/Login";
+    options.LogoutPath = "/Astrologer/Auth/Logout";
+    options.AccessDeniedPath = "/Astrologer/Auth/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(12);
+    options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 // ── Authorization Policies ──
@@ -70,7 +82,15 @@ builder.Services.AddAuthorization(options =>
         policy.AuthenticationSchemes.Add("ClientCookie");
         policy.RequireAuthenticatedUser();
     });
+    options.AddPolicy("AstrologerOnly", policy =>
+    {
+        policy.AuthenticationSchemes.Add("AstrologerCookie");
+        policy.RequireRole("Astrologer");
+    });
 });
+
+// ── Real-Time SignalR Engine ──
+builder.Services.AddSignalR();
 
 // ── MVC Controllers with Views ──
 builder.Services.AddControllersWithViews();
@@ -110,16 +130,25 @@ app.MapAreaControllerRoute(
     areaName: "Admin",
     pattern: "Admin/{controller=Home}/{action=Index}/{id?}");
 
-// 2. Client Area Explicit: /Client/...
+// 2. Astrologer Area: /Astrologer/...
+app.MapAreaControllerRoute(
+    name: "AstrologerArea",
+    areaName: "Astrologer",
+    pattern: "Astrologer/{controller=Home}/{action=Index}/{id?}");
+
+// 3. Client Area Explicit: /Client/...
 app.MapAreaControllerRoute(
     name: "ClientArea",
     areaName: "Client",
     pattern: "Client/{controller=Home}/{action=Index}/{id?}");
 
-// 3. Default Root Route: / maps cleanly to Client Area
+// 4. Default Root Route: / maps cleanly to Client Area
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}",
     defaults: new { area = "Client" });
+
+// ── SignalR Hub Endpoint ──
+app.MapHub<CYHAstro.Web.Hubs.ConsultationHub>("/hubs/consultation");
 
 app.Run();

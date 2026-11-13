@@ -82,5 +82,97 @@ public static class AdminDbSeeder
                 await userManager.AddToRoleAsync(existingUser, "Admin");
             }
         }
+
+        // ── Seed Default Astrologer User ──
+        const string astroEmail = "astrologer@cyhastro.com";
+        var existingAstro = await userManager.FindByEmailAsync(astroEmail);
+        long astroProfileId = 0;
+
+        if (existingAstro == null)
+        {
+            var astroUser = new CYHAstroIdentityUser
+            {
+                UserName = astroEmail,
+                Email = astroEmail,
+                DisplayName = "Acharya Raman Shastri",
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var createAstroRes = await userManager.CreateAsync(astroUser, "Astro@CYHAstro2026!");
+            if (createAstroRes.Succeeded)
+            {
+                await userManager.AddToRoleAsync(astroUser, "Astrologer");
+
+                using var conn = await db.CreateOpenConnectionAsync();
+                var publicId = "usr_" + Guid.NewGuid().ToString("N")[..16];
+                const string sqlInsertProfile = @"
+                    INSERT INTO dbo.UserProfiles (PublicId, IdentityId, DisplayName, Email, IsEmailVerified, IsActive, CreatedAt)
+                    VALUES (@PublicId, @IdentityId, @DisplayName, @Email, 1, 1, GETUTCDATE());
+                    SELECT SCOPE_IDENTITY();
+                ";
+
+                astroProfileId = await conn.ExecuteScalarAsync<long>(sqlInsertProfile, new
+                {
+                    PublicId = publicId,
+                    IdentityId = astroUser.Id,
+                    DisplayName = "Acharya Raman Shastri",
+                    Email = astroEmail
+                });
+            }
+        }
+        else
+        {
+            if (!await userManager.IsInRoleAsync(existingAstro, "Astrologer"))
+            {
+                await userManager.AddToRoleAsync(existingAstro, "Astrologer");
+            }
+
+            using var conn = await db.CreateOpenConnectionAsync();
+            var pId = await conn.QuerySingleOrDefaultAsync<long?>(
+                "SELECT Id FROM dbo.UserProfiles WHERE Email = @Email", new { Email = astroEmail });
+            if (pId.HasValue) astroProfileId = pId.Value;
+        }
+
+        // Link profile to Astrologers record
+        if (astroProfileId > 0)
+        {
+            using var conn = await db.CreateOpenConnectionAsync();
+            const string sqlEnsureAstro = @"
+                IF NOT EXISTS (SELECT 1 FROM dbo.Astrologers WHERE UserId = @UserId)
+                BEGIN
+                    IF EXISTS (SELECT 1 FROM dbo.Astrologers WHERE PublicId = 'ast_raman_01')
+                    BEGIN
+                        UPDATE dbo.Astrologers SET UserId = @UserId WHERE PublicId = 'ast_raman_01';
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO dbo.Astrologers (
+                            PublicId, UserId, DisplayName, Specializations, Languages, Bio,
+                            ChatRatePerMinute, AudioRatePerMinute, VideoRatePerMinute, Rating, TotalReviews,
+                            TotalConsultations, ExperienceYears, IsAvailable, IsVerified, IsActive,
+                            ProfilePhotoUrl, CommissionRatePct, CreatedAt
+                        )
+                        VALUES (
+                            'ast_raman_01', @UserId, 'Acharya Raman Shastri',
+                            '[""Vedic Astrology"", ""Kundli Matching"", ""Vastu Shastra""]',
+                            '[""Hindi"", ""English"", ""Sanskrit""]',
+                            'Gold Medalist in Vedic Jyotish with 18 years of experience. Career, marriage & kundli expert.',
+                            25.00, 35.00, 45.00, 4.96, 50,
+                            120, 18, 1, 1, 1,
+                            'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=400',
+                            20.00, GETUTCDATE()
+                        );
+                    END
+                END
+
+                IF NOT EXISTS (SELECT 1 FROM dbo.Wallets WHERE UserId = @UserId)
+                BEGIN
+                    INSERT INTO dbo.Wallets (UserId, PaidBalance, BonusBalance, CurrencyCode, CreatedAt)
+                    VALUES (@UserId, 5000.00, 0.00, 'INR', GETUTCDATE());
+                END
+            ";
+            await conn.ExecuteAsync(sqlEnsureAstro, new { UserId = astroProfileId });
+        }
     }
 }
