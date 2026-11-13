@@ -11,17 +11,20 @@ public sealed class KundliController : Controller
     private readonly IAstrologyCalculationService _astrologyService;
     private readonly IProfileService _profileService;
     private readonly IKundliPdfService _pdfService;
+    private readonly IMatchmakingPdfService _matchmakingPdfService;
     private readonly ILogger<KundliController> _logger;
 
     public KundliController(
         IAstrologyCalculationService astrologyService,
         IProfileService profileService,
         IKundliPdfService pdfService,
+        IMatchmakingPdfService matchmakingPdfService,
         ILogger<KundliController> logger)
     {
         _astrologyService = astrologyService;
         _profileService = profileService;
         _pdfService = pdfService;
+        _matchmakingPdfService = matchmakingPdfService;
         _logger = logger;
     }
 
@@ -150,7 +153,37 @@ public sealed class KundliController : Controller
 
         ViewBag.MaleName = model.MaleName;
         ViewBag.FemaleName = model.FemaleName;
+        ViewBag.MatchmakingRequest = model;
 
         return View("MatchmakingResult", result.Value);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DownloadMatchmakingPdf(MatchmakingRequestDto model, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(model.MaleName) || string.IsNullOrWhiteSpace(model.FemaleName))
+        {
+            TempData["Error"] = "Names are required to generate Matchmaking PDF.";
+            return RedirectToAction(nameof(Matchmaking));
+        }
+
+        var result = await _astrologyService.CalculateMatchmakingAsync(model, ct);
+        if (!result.IsSuccess || result.Value == null)
+        {
+            TempData["Error"] = result.Error ?? "Matchmaking calculation failed.";
+            return RedirectToAction(nameof(Matchmaking));
+        }
+
+        var pdfResult = await _matchmakingPdfService.GenerateMatchmakingPdfAsync(result.Value, model, ct);
+        if (!pdfResult.IsSuccess || pdfResult.Value == null)
+        {
+            TempData["Error"] = pdfResult.Error ?? "Matchmaking PDF generation failed.";
+            return RedirectToAction(nameof(Matchmaking));
+        }
+
+        var safeGroom = string.Join("_", model.MaleName.Split(Path.GetInvalidFileNameChars()));
+        var safeBride = string.Join("_", model.FemaleName.Split(Path.GetInvalidFileNameChars()));
+        return File(pdfResult.Value, "application/pdf", $"CYHAstro_Kundli_Milan_{safeGroom}_{safeBride}.pdf");
     }
 }

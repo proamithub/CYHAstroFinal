@@ -11,24 +11,42 @@ namespace CYHAstro.Web.Areas.Client.Controllers;
 public sealed class DashboardController : Controller
 {
     private readonly IProfileService _profileService;
+    private readonly IConsultationService _consultationService;
+    private readonly IWalletService _walletService;
     private readonly ILogger<DashboardController> _logger;
 
-    public DashboardController(IProfileService profileService, ILogger<DashboardController> logger)
+    public DashboardController(
+        IProfileService profileService,
+        IConsultationService consultationService,
+        IWalletService walletService,
+        ILogger<DashboardController> logger)
     {
         _profileService = profileService;
+        _consultationService = consultationService;
+        _walletService = walletService;
         _logger = logger;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(CancellationToken ct)
+    public async Task<IActionResult> Index([FromQuery] string? tab, CancellationToken ct)
     {
         var userId = GetCurrentUserId();
         if (userId <= 0) return RedirectToAction("Login", "Auth", new { area = "Client" });
 
         var profileRes = await _profileService.GetProfileAsync(userId, ct);
         var prefRes = await _profileService.GetPreferencesAsync(userId, ct);
+        var profilesRes = await _profileService.GetBirthProfilesAsync(userId, ct);
+        var consultsRes = await _consultationService.GetUserConsultationsAsync(userId, 50, ct);
+        var txRes = await _walletService.GetTransactionHistoryAsync(userId, 1, 50, ct);
+        var balanceRes = await _walletService.GetBalanceAsync(userId, ct);
 
+        ViewBag.ActiveTab = string.IsNullOrWhiteSpace(tab) ? "profile" : tab.ToLowerInvariant();
         ViewBag.Preferences = prefRes.IsSuccess ? prefRes.Value : new UserPreferenceDto();
+        ViewBag.BirthProfiles = profilesRes.IsSuccess ? profilesRes.Value : new List<BirthProfileDto>();
+        ViewBag.Consultations = consultsRes.IsSuccess ? consultsRes.Value : new List<CYHAstro.Core.DTOs.Consultation.ConsultationResponseDto>();
+        ViewBag.Transactions = txRes.IsSuccess && txRes.Value != null ? txRes.Value.Items : new List<CYHAstro.Core.DTOs.Wallet.WalletTransactionDto>();
+        ViewBag.WalletBalance = balanceRes.IsSuccess && balanceRes.Value != null ? balanceRes.Value.TotalBalance : 0m;
+
         return View(profileRes.IsSuccess ? profileRes.Value : null);
     }
 

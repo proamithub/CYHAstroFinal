@@ -75,7 +75,7 @@ public sealed class AstrologersController : Controller
         {
             Id = astro.Id,
             IsVerified = isVerified,
-            IsActive = astro.IsActive,
+            IsActive = isVerified ? true : astro.IsActive,
             CommissionRatePct = astro.CommissionRatePct,
             ChatRatePerMinute = astro.ChatRatePerMinute,
             AudioRatePerMinute = astro.AudioRatePerMinute,

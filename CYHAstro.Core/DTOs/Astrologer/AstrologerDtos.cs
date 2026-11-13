@@ -113,3 +113,19 @@ public sealed record AstrologerEarningItemDto
     public decimal NetEarning { get; init; }
     public DateTime CreatedAt { get; init; }
 }
+
+public sealed record AstrologerRegistrationDto
+{
+    public string DisplayName { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string PhoneNumber { get; init; } = string.Empty;
+    public string Password { get; init; } = string.Empty;
+    public string ConfirmPassword { get; init; } = string.Empty;
+    public int ExperienceYears { get; init; } = 5;
+    public string Specializations { get; init; } = "Vedic Astrology, Kundli Analysis";
+    public string Languages { get; init; } = "Hindi, English";
+    public string? Bio { get; init; }
+    public decimal ChatRatePerMinute { get; init; } = 15m;
+    public decimal AudioRatePerMinute { get; init; } = 25m;
+    public decimal VideoRatePerMinute { get; init; } = 35m;
+}

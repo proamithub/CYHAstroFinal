@@ -41,6 +41,24 @@
                     <span>Astrologers</span>
                 </a>
 
+                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payouts" ? "active" : "")"
+                   asp-controller="Payouts" asp-action="Index">
+                    <i class="fa-solid fa-money-bill-transfer text-success"></i>
+                    <span>Payout Settlements</span>
+                </a>
+
+                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Users" ? "active" : "")"
+                   asp-controller="Users" asp-action="Index">
+                    <i class="fa-solid fa-users text-primary"></i>
+                    <span>Seeker Directory</span>
+                </a>
+
+                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Consultations" ? "active" : "")"
+                   asp-controller="Consultations" asp-action="Index">
+                    <i class="fa-solid fa-headset text-info"></i>
+                    <span>Consultation Logs</span>
+                </a>
+
                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Packages" ? "active" : "")"
                    asp-controller="Packages" asp-action="Index">
                     <i class="fa-solid fa-cubes text-warning"></i>
@@ -49,7 +67,7 @@
 
                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Transactions" ? "active" : "")"
                    asp-controller="Transactions" asp-action="Index">
-                    <i class="fa-solid fa-receipt text-success"></i>
+                    <i class="fa-solid fa-receipt text-secondary"></i>
                     <span>Financial Ledger</span>
                 </a>
 

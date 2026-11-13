@@ -19,4 +19,6 @@ public interface IAstrologerService
     Task<Result<AstrologerListingDto?>> GetAstrologerByUserIdAsync(long userId, CancellationToken ct = default);
     Task<Result> UpdateProfileAsync(long userId, UpdateAstrologerProfileDto dto, CancellationToken ct = default);
     Task<Result<IReadOnlyList<AstrologerEarningItemDto>>> GetEarningsHistoryAsync(long userId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<CYHAstro.Core.DTOs.Admin.SettlementDto>>> GetSettlementsAsync(long userId, CancellationToken ct = default);
+    Task<Result> RequestSettlementAsync(long userId, decimal amount, string payoutMethod, string remarks, CancellationToken ct = default);
 }

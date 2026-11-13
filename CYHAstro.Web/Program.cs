@@ -146,6 +146,16 @@ app.MapControllerRoute(
     pattern: "Astrologer/Logout",
     defaults: new { area = "Astrologer", controller = "Auth", action = "Logout" });
 
+app.MapControllerRoute(
+    name: "AstrologerRegister",
+    pattern: "Astrologer/Register",
+    defaults: new { area = "Astrologer", controller = "Auth", action = "Register" });
+
+app.MapControllerRoute(
+    name: "AiChatRoute",
+    pattern: "AiChat/{action=Index}/{id?}",
+    defaults: new { area = "Client", controller = "AiChat" });
+
 // 3. Client Area Explicit: /Client/...
 app.MapAreaControllerRoute(
     name: "ClientArea",

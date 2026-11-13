@@ -90,3 +90,31 @@ public sealed record AdminConsultationDto
     public decimal AstrologerEarnings { get; init; }
     public DateTime CreatedAt { get; init; }
 }
+
+public sealed record SettlementDto
+{
+    public long Id { get; init; }
+    public string PublicId { get; init; } = string.Empty;
+    public long AstrologerId { get; init; }
+    public string AstrologerName { get; init; } = string.Empty;
+    public decimal Amount { get; init; }
+    public string PayoutMethod { get; init; } = "UPI";
+    public string? PayoutReference { get; init; }
+    public string Status { get; init; } = "PENDING";
+    public DateTime? ProcessedAt { get; init; }
+    public string? Remarks { get; init; }
+    public DateTime CreatedAt { get; init; }
+}
+
+public sealed record AdminUserDto
+{
+    public long Id { get; init; }
+    public string PublicId { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public string? PhoneNumber { get; init; }
+    public decimal MainBalance { get; init; }
+    public decimal PromotionalBalance { get; init; }
+    public bool IsActive { get; init; }
+    public DateTime CreatedAt { get; init; }
+}

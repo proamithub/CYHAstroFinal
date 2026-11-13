@@ -122,6 +122,27 @@
                             </div>
                         </div>
 
+                        <!-- Notification Bell -->
+                        <div class="dropdown" id="astroNotifDropdown">
+                            <button class="btn btn-link text-secondary p-1 position-relative" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false" id="astroNotifBtn"
+                                    title="Notifications">
+                                <i class="fa-solid fa-bell fs-5" id="astroNotifIcon"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                                      id="astroNotifBadge" style="font-size:0.65rem;">0</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark border-secondary shadow"
+                                style="min-width:320px; max-width:360px;" id="astroNotifList">
+                                <li class="px-3 py-2 d-flex justify-content-between align-items-center border-bottom border-secondary">
+                                    <span class="fw-bold small text-warning"><i class="fa-solid fa-bell me-1"></i> Notifications</span>
+                                    <button class="btn btn-link btn-sm text-secondary p-0 small" onclick="astroMarkAllRead()">Mark all read</button>
+                                </li>
+                                <li id="astroNotifEmpty" class="px-3 py-3 text-center text-secondary small">
+                                    <i class="fa-solid fa-check-circle me-1 text-success"></i> You're all caught up!
+                                </li>
+                            </ul>
+                        </div>
+
                         <!-- User Info & Logout -->
                         <div class="dropdown">
                             <button class="btn btn-outline-secondary dropdown-toggle text-light btn-sm d-flex align-items-center gap-2 border-opacity-50"
@@ -247,6 +268,94 @@
                 label.innerText = !isAvailable ? "Online" : "Offline";
             }
         }
+    </script>
+
+    <!-- Astrologer Notification Bell JS -->
+    <script>
+        (function () {
+            let _astroNotifTimer = null;
+
+            async function loadAstroNotifications() {
+                try {
+                    const resp = await fetch('/Astrologer/Notifications/List', { credentials: 'same-origin' });
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+                    if (!data.success) return;
+
+                    const badge = document.getElementById('astroNotifBadge');
+                    const icon = document.getElementById('astroNotifIcon');
+                    const list = document.getElementById('astroNotifList');
+                    const empty = document.getElementById('astroNotifEmpty');
+                    const count = data.unreadCount || 0;
+
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.classList.remove('d-none');
+                        icon.classList.add('text-warning');
+                        icon.classList.remove('text-secondary');
+                    } else {
+                        badge.classList.add('d-none');
+                        icon.classList.remove('text-warning');
+                        icon.classList.add('text-secondary');
+                    }
+
+                    // Remove old items (keep header + empty)
+                    const toRemove = list.querySelectorAll('.astro-notif-item');
+                    toRemove.forEach(el => el.remove());
+
+                    if (!data.items || data.items.length === 0) {
+                        empty.classList.remove('d-none');
+                    } else {
+                        empty.classList.add('d-none');
+                        data.items.forEach(n => {
+                            const li = document.createElement('li');
+                            li.className = 'astro-notif-item border-bottom border-secondary border-opacity-25';
+                            li.innerHTML = `<a href="${n.actionUrl || '#'}" class="dropdown-item py-2 px-3 ${n.isRead ? '' : 'fw-bold'}"
+                                onclick="astroMarkRead(${n.id}, this)">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fa-solid fa-star-and-crescent text-warning mt-1 small"></i>
+                                    <div>
+                                        <div class="small">${n.title || ''}</div>
+                                        <div class="text-secondary" style="font-size:0.75rem;">${n.message || ''}</div>
+                                    </div>
+                                </div>
+                            </a>`;
+                            list.appendChild(li);
+                        });
+                    }
+                } catch (e) { }
+            }
+
+            window.astroMarkRead = async function (id, el) {
+                try {
+                    const form = new FormData();
+                    form.append('id', id);
+                    const tok = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (tok) form.append('__RequestVerificationToken', tok.value);
+                    await fetch('/Astrologer/Notifications/MarkRead', { method: 'POST', body: form, credentials: 'same-origin' });
+                    el?.closest('.astro-notif-item')?.querySelector('a')?.classList.remove('fw-bold');
+                    await loadAstroNotifications();
+                } catch (e) { }
+            };
+
+            window.astroMarkAllRead = async function () {
+                try {
+                    const form = new FormData();
+                    const tok = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (tok) form.append('__RequestVerificationToken', tok.value);
+                    await fetch('/Astrologer/Notifications/MarkAllRead', { method: 'POST', body: form, credentials: 'same-origin' });
+                    await loadAstroNotifications();
+                } catch (e) { }
+            };
+
+            // Load on page load & every 30s
+            document.addEventListener('DOMContentLoaded', function () {
+                if (document.getElementById('astroNotifBadge')) {
+                    loadAstroNotifications();
+                    _astroNotifTimer = setInterval(loadAstroNotifications, 30000);
+                }
+            });
+        })();
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

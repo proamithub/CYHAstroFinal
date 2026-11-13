@@ -164,4 +164,114 @@ public sealed class AuthController : Controller
     {
         return View();
     }
+
+    [HttpGet]
+    public IActionResult Register()
+    {
+        if (User.Identity?.IsAuthenticated == true && User.IsInRole("Astrologer"))
+        {
+            return RedirectToAction("Index", "Home", new { area = "Astrologer" });
+        }
+
+        return View(new CYHAstro.Core.DTOs.Astrologer.AstrologerRegistrationDto());
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(CYHAstro.Core.DTOs.Astrologer.AstrologerRegistrationDto model)
+    {
+        if (string.IsNullOrWhiteSpace(model.DisplayName) ||
+            string.IsNullOrWhiteSpace(model.Email) ||
+            string.IsNullOrWhiteSpace(model.Password))
+        {
+            ModelState.AddModelError("", "Name, email and password are required.");
+            return View(model);
+        }
+
+        if (model.Password != model.ConfirmPassword)
+        {
+            ModelState.AddModelError("", "Passwords do not match.");
+            return View(model);
+        }
+
+        if (model.Password.Length < 6)
+        {
+            ModelState.AddModelError("", "Password must be at least 6 characters long.");
+            return View(model);
+        }
+
+        var existingUser = await _userManager.FindByEmailAsync(model.Email);
+        if (existingUser != null)
+        {
+            ModelState.AddModelError("", "An account with this email address already exists.");
+            return View(model);
+        }
+
+        var identityUser = new CYHAstroIdentityUser
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            DisplayName = model.DisplayName,
+            PhoneNumber = model.PhoneNumber
+        };
+
+        var createResult = await _userManager.CreateAsync(identityUser, model.Password);
+        if (!createResult.Succeeded)
+        {
+            foreach (var err in createResult.Errors)
+            {
+                ModelState.AddModelError("", err.Description);
+            }
+            return View(model);
+        }
+
+        await _userManager.AddToRoleAsync(identityUser, "Astrologer");
+
+        // Insert UserProfile and Astrologer record
+        using var conn = await _db.CreateOpenConnectionAsync();
+        var userPublicId = "usr_" + Guid.NewGuid().ToString("N")[..16];
+        var userProfileId = await conn.ExecuteScalarAsync<long>(@"
+            INSERT INTO dbo.UserProfiles (PublicId, IdentityId, DisplayName, Email, PhoneNumber, PreferredLanguage, IsEmailVerified, IsPhoneVerified, IsActive, CreatedAt)
+            VALUES (@PublicId, @IdentityId, @DisplayName, @Email, @PhoneNumber, 'en', 1, 0, 1, GETUTCDATE());
+            SELECT SCOPE_IDENTITY();",
+            new
+            {
+                PublicId = userPublicId,
+                IdentityId = identityUser.Id,
+                DisplayName = model.DisplayName,
+                Email = model.Email,
+                PhoneNumber = model.PhoneNumber
+            });
+
+        var astroPublicId = "ast_" + Guid.NewGuid().ToString("N")[..16];
+        await conn.ExecuteAsync(@"
+            INSERT INTO dbo.Astrologers 
+            (PublicId, UserId, DisplayName, Specializations, Languages, Bio, 
+             ChatRatePerMinute, AudioRatePerMinute, VideoRatePerMinute, Rating, 
+             TotalReviews, TotalConsultations, ExperienceYears, IsAvailable, 
+             IsVerified, IsActive, CommissionRatePct, CreatedAt, IsDeleted)
+            VALUES 
+            (@PublicId, @UserId, @DisplayName, @Specializations, @Languages, @Bio, 
+             @ChatRate, @AudioRate, @VideoRate, 5.0, 
+             0, 0, @ExperienceYears, 0, 
+             0, 0, 20.0, GETUTCDATE(), 0);",
+            new
+            {
+                PublicId = astroPublicId,
+                UserId = userProfileId,
+                DisplayName = model.DisplayName,
+                Specializations = string.IsNullOrWhiteSpace(model.Specializations) ? "Vedic Astrology" : model.Specializations,
+                Languages = string.IsNullOrWhiteSpace(model.Languages) ? "Hindi, English" : model.Languages,
+                Bio = model.Bio ?? "Experienced Vedic Astrologer committed to providing authentic astrological remedies and guidance.",
+                ChatRate = model.ChatRatePerMinute > 0 ? model.ChatRatePerMinute : 15m,
+                AudioRate = model.AudioRatePerMinute > 0 ? model.AudioRatePerMinute : 25m,
+                VideoRate = model.VideoRatePerMinute > 0 ? model.VideoRatePerMinute : 35m,
+                ExperienceYears = model.ExperienceYears > 0 ? model.ExperienceYears : 5
+            });
+
+        _logger.LogInformation("New astrologer application submitted for {Email} (Profile #{ProfileId})", model.Email, userProfileId);
+
+        TempData["Success"] = "Application Submitted Successfully! Our Vedic verification team will review your credentials within 24-48 hours. Once approved by Admin, you can log in to your Astrologer portal.";
+        return RedirectToAction(nameof(Login));
+    }
 }

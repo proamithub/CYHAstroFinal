@@ -1,0 +1,111 @@
+@model IReadOnlyList<CYHAstro.Core.DTOs.Admin.AdminConsultationDto>
+@{
+    ViewData["Title"] = "Platform Consultations Audit";
+    var currentStatus = ViewBag.Status as string;
+}
+
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h3 class="text-white fw-bold mb-1">Live Consultations Audit</h3>
+            <p class="text-secondary small mb-0">Platform-wide audit log of all Chat, Audio, and Video sessions between seekers and astrologers.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-dark border border-warning text-warning px-3 py-2 d-flex align-items-center">
+                Total Sessions: <strong class="ms-1">@(Model?.Count ?? 0)</strong>
+            </span>
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="card admin-card p-3 mb-4">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-secondary small fw-bold text-uppercase me-2"><i class="fa-solid fa-filter text-warning me-1"></i> Status:</span>
+            <a asp-action="Index" asp-route-status=""
+               class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-gold" : "btn-outline-secondary")">
+                All Sessions
+            </a>
+            <a asp-action="Index" asp-route-status="COMPLETED"
+               class="btn btn-sm @(currentStatus == "COMPLETED" ? "btn-gold" : "btn-outline-secondary")">
+                Completed
+            </a>
+            <a asp-action="Index" asp-route-status="ACTIVE"
+               class="btn btn-sm @(currentStatus == "ACTIVE" ? "btn-gold" : "btn-outline-secondary")">
+                Active / In Progress
+            </a>
+            <a asp-action="Index" asp-route-status="TERMINATED"
+               class="btn btn-sm @(currentStatus == "TERMINATED" ? "btn-gold" : "btn-outline-secondary")">
+                Terminated
+            </a>
+        </div>
+    </div>
+
+    <!-- Consultations Table -->
+    <div class="card admin-card overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-admin mb-0">
+                <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Seeker</th>
+                        <th>Astrologer</th>
+                        <th>Medium</th>
+                        <th>Duration</th>
+                        <th>Gross Revenue</th>
+                        <th>Platform Cut</th>
+                        <th>Astrologer Net</th>
+                        <th>Status</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var c in Model)
+                        {
+                            <tr>
+                                <td class="font-monospace text-warning small">@c.PublicId</td>
+                                <td class="text-white fw-bold">@c.UserName</td>
+                                <td class="text-info fw-bold">@c.AstrologerName</td>
+                                <td>
+                                    <span class="badge @(c.SessionType == "VIDEO" ? "bg-primary" : c.SessionType == "AUDIO" ? "bg-info text-dark" : "bg-warning text-dark")">
+                                        @c.SessionType
+                                    </span>
+                                </td>
+                                <td>@(c.DurationSeconds / 60)m @(c.DurationSeconds % 60)s</td>
+                                <td class="text-light fw-bold">₹@c.TotalAmount.ToString("F2")</td>
+                                <td class="text-success fw-bold">+₹@c.PlatformCommission.ToString("F2")</td>
+                                <td class="text-warning fw-bold">₹@c.AstrologerEarnings.ToString("F2")</td>
+                                <td>
+                                    @if (c.Status == "COMPLETED")
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i> Completed</span>
+                                    }
+                                    else if (c.Status == "ACTIVE")
+                                    {
+                                        <span class="badge bg-primary"><i class="fa-solid fa-signal me-1"></i> Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@c.Status</span>
+                                    }
+                                </td>
+                                <td class="text-secondary small">@c.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-secondary py-5">
+                                <i class="fa-solid fa-phone-slash fs-3 mb-2 d-block"></i>
+                                No consultation sessions found for this view.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -22,6 +22,9 @@ public sealed record ConsultationResponseDto
     public string? LiveKitToken { get; init; }
     public DateTime? ConnectedAt { get; init; }
     public int DurationSeconds { get; init; }
+    public decimal TotalCharge { get; init; }
+    public decimal AstrologerEarnings { get; init; }
+    public decimal PlatformCommission { get; init; }
     public DateTime CreatedAt { get; init; }
 }
 

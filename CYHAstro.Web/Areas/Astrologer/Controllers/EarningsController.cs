@@ -31,7 +31,30 @@ public sealed class EarningsController : Controller
         var dashRes = await _astrologerService.GetDashboardAsync(userId, ct);
         ViewBag.Dashboard = dashRes.IsSuccess ? dashRes.Value! : new AstrologerDashboardDto();
 
+        var settleRes = await _astrologerService.GetSettlementsAsync(userId, ct);
+        ViewBag.Settlements = settleRes.IsSuccess ? settleRes.Value! : new List<CYHAstro.Core.DTOs.Admin.SettlementDto>();
+
         return View(earnings);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RequestWithdrawal(decimal amount, string payoutMethod, string remarks, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return RedirectToAction("Login", "Auth", new { area = "Astrologer" });
+
+        var res = await _astrologerService.RequestSettlementAsync(userId, amount, payoutMethod, remarks, ct);
+        if (res.IsSuccess)
+        {
+            TempData["Success"] = $"Payout request of ₹{amount:F2} submitted successfully! Admin will process your transfer via {payoutMethod}.";
+        }
+        else
+        {
+            TempData["Error"] = res.Error ?? "Failed to submit payout request.";
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     private long GetCurrentUserId()

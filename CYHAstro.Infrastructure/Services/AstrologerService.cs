@@ -360,6 +360,79 @@ public sealed class AstrologerService : IAstrologerService
         return Result<IReadOnlyList<AstrologerEarningItemDto>>.Success(list);
     }
 
+    public async Task<Result<IReadOnlyList<CYHAstro.Core.DTOs.Admin.SettlementDto>>> GetSettlementsAsync(long userId, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        const string sql = @"
+            SELECT 
+                s.Id,
+                s.PublicId,
+                s.AstrologerId,
+                a.DisplayName AS AstrologerName,
+                s.Amount,
+                s.PayoutMethod,
+                s.PayoutReference,
+                s.Status,
+                s.ProcessedAt,
+                s.Remarks,
+                s.CreatedAt
+            FROM dbo.Settlements s
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE a.UserId = @UserId
+            ORDER BY s.CreatedAt DESC";
+
+        var list = (await conn.QueryAsync<CYHAstro.Core.DTOs.Admin.SettlementDto>(sql, new { UserId = userId })).ToList();
+        return Result<IReadOnlyList<CYHAstro.Core.DTOs.Admin.SettlementDto>>.Success(list);
+    }
+
+    public async Task<Result> RequestSettlementAsync(long userId, decimal amount, string payoutMethod, string remarks, CancellationToken ct = default)
+    {
+        if (amount < 100m)
+        {
+            return Result.Failure("Minimum payout withdrawal request is ₹100.");
+        }
+
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+        var astro = await conn.QuerySingleOrDefaultAsync<dynamic>(
+            "SELECT Id, DisplayName FROM dbo.Astrologers WHERE UserId = @UserId AND IsDeleted = 0",
+            new { UserId = userId });
+
+        if (astro == null)
+        {
+            return Result.Failure("Astrologer account not found.", Result.ErrorCodes.NotFound);
+        }
+
+        var totalEarned = await conn.ExecuteScalarAsync<decimal?>(
+            "SELECT SUM(Amount) FROM dbo.AstrologerEarnings WHERE AstrologerId = @AstrologerId",
+            new { AstrologerId = (long)astro.Id }) ?? 0m;
+
+        var totalRequestedOrSettled = await conn.ExecuteScalarAsync<decimal?>(
+            "SELECT SUM(Amount) FROM dbo.Settlements WHERE AstrologerId = @AstrologerId AND Status IN ('PENDING', 'COMPLETED')",
+            new { AstrologerId = (long)astro.Id }) ?? 0m;
+
+        var availableBalance = totalEarned - totalRequestedOrSettled;
+        if (amount > availableBalance)
+        {
+            return Result.Failure($"Requested amount ₹{amount:F2} exceeds withdrawable balance of ₹{availableBalance:F2}.");
+        }
+
+        var publicId = "set_" + Guid.NewGuid().ToString("N")[..16];
+        await conn.ExecuteAsync(@"
+            INSERT INTO dbo.Settlements (PublicId, AstrologerId, Amount, PayoutMethod, Status, Remarks, CreatedAt)
+            VALUES (@PublicId, @AstrologerId, @Amount, @PayoutMethod, 'PENDING', @Remarks, GETUTCDATE());",
+            new
+            {
+                PublicId = publicId,
+                AstrologerId = (long)astro.Id,
+                Amount = amount,
+                PayoutMethod = string.IsNullOrWhiteSpace(payoutMethod) ? "UPI" : payoutMethod,
+                Remarks = remarks
+            });
+
+        _logger.LogInformation("Settlement request {PublicId} of ₹{Amount} created for Astrologer #{AstrologerId}", publicId, (long)astro.Id, amount);
+        return Result.Success();
+    }
+
     private static AstrologerListingDto MapToListingDto(Astrologer a) => new()
     {
         Id = a.Id,

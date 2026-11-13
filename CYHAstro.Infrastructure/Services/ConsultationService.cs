@@ -725,4 +725,43 @@ public sealed class ConsultationService : IConsultationService
 
         return Result<IReadOnlyList<ConsultationResponseDto>>.Success(list);
     }
+
+    public async Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetUserConsultationsAsync(long userId, int limit = 50, CancellationToken ct = default)
+    {
+        using var conn = await _db.CreateOpenConnectionAsync(ct);
+
+        const string sql = @"
+            SELECT TOP (@Limit) s.*, 
+                   u.DisplayName AS UserName, u.AvatarUrl AS UserAvatar,
+                   a.DisplayName AS AstrologerName, a.ProfilePhotoUrl AS AstrologerPhoto
+            FROM dbo.ConsultationSessions s
+            JOIN dbo.UserProfiles u ON u.Id = s.UserId
+            JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+            WHERE s.UserId = @UserId AND s.IsDeleted = 0
+            ORDER BY s.CreatedAt DESC;";
+
+        var rows = await conn.QueryAsync<dynamic>(sql, new { UserId = userId, Limit = limit });
+        var list = rows.Select(s => new ConsultationResponseDto
+        {
+            SessionId = (long)s.Id,
+            PublicId = (string)s.PublicId,
+            UserId = (long)s.UserId,
+            UserName = (string)s.UserName,
+            AstrologerId = (long)s.AstrologerId,
+            AstrologerName = (string)s.AstrologerName,
+            AstrologerPhoto = s.AstrologerPhoto != null ? (string)s.AstrologerPhoto : null,
+            SessionType = (string)s.SessionType,
+            Status = (string)s.Status,
+            RatePerMinute = (decimal)s.RatePerMinute,
+            TotalCharge = s.TotalCharge != null ? (decimal)s.TotalCharge : 0m,
+            AstrologerEarnings = s.AstrologerEarnings != null ? (decimal)s.AstrologerEarnings : 0m,
+            PlatformCommission = s.PlatformCommission != null ? (decimal)s.PlatformCommission : 0m,
+            LiveKitRoomName = (string)s.LiveKitRoomName,
+            DurationSeconds = s.DurationSeconds != null ? (int)s.DurationSeconds : 0,
+            ConnectedAt = s.ConnectedAt != null ? (DateTime?)s.ConnectedAt : null,
+            CreatedAt = (DateTime)s.CreatedAt
+        }).ToList();
+
+        return Result<IReadOnlyList<ConsultationResponseDto>>.Success(list);
+    }
 }

@@ -58,6 +58,11 @@
                                 <i class="fa-solid fa-heart text-danger me-1"></i> Kundli Milan
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="AiChat" asp-action="Index">
+                                <i class="fa-solid fa-sparkles text-info me-1"></i> Ask AI Astrologer <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">AI</span>
+                            </a>
+                        </li>
                     </ul>
 
                     <!-- User Actions -->
@@ -70,6 +75,29 @@
                                 <span>₹<span id="navWalletBalance">--</span></span>
                                 <i class="fa-solid fa-circle-plus ms-1 text-warning"></i>
                             </a>
+
+                            <!-- Notifications Bell -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary position-relative py-1 px-2 text-warning border-0"
+                                        type="button" id="notifMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                                    <i class="fa-solid fa-bell fs-5"></i>
+                                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">
+                                        0
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow p-0" style="width: 320px; max-height: 400px; overflow-y: auto;" aria-labelledby="notifMenuButton">
+                                    <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-black">
+                                        <h6 class="mb-0 text-white fw-bold brand-font small"><i class="fa-solid fa-bell text-warning me-1"></i> Notifications</h6>
+                                        <button type="button" class="btn btn-link text-warning p-0 text-decoration-none small" style="font-size: 0.75rem;" onclick="markAllNotifsRead()">Mark all read</button>
+                                    </div>
+                                    <div id="notifListContainer">
+                                        <div class="text-center py-4 text-secondary small">
+                                            <i class="fa-solid fa-bell-slash fs-4 text-secondary mb-2 d-block opacity-50"></i>
+                                            No notifications right now
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- User Dropdown -->
                             <div class="dropdown">
@@ -217,7 +245,7 @@
     @if (User.Identity?.IsAuthenticated == true)
     {
         <script>
-            // Live Wallet Balance Fetch
+            // Live Wallet Balance & Notifications Fetch
             document.addEventListener("DOMContentLoaded", function () {
                 fetch('/api/v1/wallet')
                     .then(res => res.ok ? res.json() : null)
@@ -228,7 +256,78 @@
                         }
                     })
                     .catch(() => {});
+
+                loadNotifications();
             });
+
+            function loadNotifications() {
+                fetch('/Client/Notifications/List')
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (!data || !data.success) return;
+
+                        const badge = document.getElementById("notifBadge");
+                        if (badge) {
+                            if (data.unreadCount > 0) {
+                                badge.innerText = data.unreadCount > 99 ? '99+' : data.unreadCount;
+                                badge.classList.remove('d-none');
+                            } else {
+                                badge.classList.add('d-none');
+                            }
+                        }
+
+                        const container = document.getElementById("notifListContainer");
+                        if (!container) return;
+
+                        if (data.items && data.items.length > 0) {
+                            container.innerHTML = data.items.map(n => `
+                                <div class="p-3 border-bottom border-secondary ${n.isRead ? 'opacity-75' : 'bg-dark bg-opacity-50'} position-relative" style="cursor: pointer;" onclick="markSingleNotifRead(${n.id}, '${n.actionUrl || ''}')">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="fw-bold ${n.isRead ? 'text-light' : 'text-warning'} small">${escapeHtml(n.title)}</span>
+                                        ${!n.isRead ? '<span class="badge bg-warning text-dark" style="font-size: 0.6rem;">NEW</span>' : ''}
+                                    </div>
+                                    <p class="text-secondary small mb-1 lh-sm">${escapeHtml(n.message)}</p>
+                                    <span class="text-muted" style="font-size: 0.65rem;">${new Date(n.createdAt).toLocaleDateString()}</span>
+                                </div>
+                            `).join('');
+                        } else {
+                            container.innerHTML = `
+                                <div class="text-center py-4 text-secondary small">
+                                    <i class="fa-solid fa-bell-slash fs-4 text-secondary mb-2 d-block opacity-50"></i>
+                                    No notifications right now
+                                </div>`;
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            function markSingleNotifRead(id, actionUrl) {
+                const formData = new FormData();
+                formData.append('id', id);
+                fetch('/Client/Notifications/MarkRead', {
+                    method: 'POST',
+                    body: formData
+                }).then(() => {
+                    if (actionUrl && actionUrl !== 'null' && actionUrl.trim() !== '') {
+                        window.location.href = actionUrl;
+                    } else {
+                        loadNotifications();
+                    }
+                }).catch(() => {});
+            }
+
+            function markAllNotifsRead() {
+                fetch('/Client/Notifications/MarkAllRead', {
+                    method: 'POST'
+                }).then(() => {
+                    loadNotifications();
+                }).catch(() => {});
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
         </script>
     }
 

@@ -3,6 +3,7 @@
     ViewData["Title"] = "Kundli Milan Result - 36 Gunas Matching";
     string groom = ViewBag.MaleName as string ?? "Groom";
     string bride = ViewBag.FemaleName as string ?? "Bride";
+    var req = ViewBag.MatchmakingRequest as CYHAstro.Core.DTOs.Astrology.MatchmakingRequestDto;
 }
 
 <div class="container py-4">
@@ -102,13 +103,32 @@
         </div>
     </div>
 
-    <!-- CTA -->
-    <div class="text-center">
-        <a asp-action="Matchmaking" class="btn btn-outline-gold me-2">
+    <!-- CTA Actions -->
+    <div class="text-center d-flex justify-content-center flex-wrap gap-2 mt-4">
+        @if (req != null)
+        {
+            <form asp-action="DownloadMatchmakingPdf" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="MaleName" value="@req.MaleName" />
+                <input type="hidden" name="MaleDob" value="@req.MaleDob.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="MaleTob" value="@req.MaleTob" />
+                <input type="hidden" name="MaleLat" value="@req.MaleLat" />
+                <input type="hidden" name="MaleLon" value="@req.MaleLon" />
+                <input type="hidden" name="FemaleName" value="@req.FemaleName" />
+                <input type="hidden" name="FemaleDob" value="@req.FemaleDob.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="FemaleTob" value="@req.FemaleTob" />
+                <input type="hidden" name="FemaleLat" value="@req.FemaleLat" />
+                <input type="hidden" name="FemaleLon" value="@req.FemaleLon" />
+                <button type="submit" class="btn btn-warning fw-bold px-4 shadow">
+                    <i class="fa-solid fa-file-pdf me-2"></i> Download PDF Report
+                </button>
+            </form>
+        }
+        <a asp-action="Matchmaking" class="btn btn-outline-gold">
             <i class="fa-solid fa-rotate-left me-1"></i> Check Another Match
         </a>
         <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold">
-            <i class="fa-solid fa-comments me-1"></i> Consult Astrologer on Kundli Milan
+            <i class="fa-solid fa-comments me-1"></i> Consult Astrologer
         </a>
     </div>
 </div>

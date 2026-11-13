@@ -365,4 +365,159 @@ public sealed class AdminService : IAdminService
             return Result<IReadOnlyList<AdminTransactionDto>>.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
         }
     }
+
+    public async Task<Result<IReadOnlyList<SettlementDto>>> GetAllSettlementsAsync(string? status = null, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string sql = @"
+                SELECT 
+                    s.Id,
+                    s.PublicId,
+                    s.AstrologerId,
+                    a.DisplayName AS AstrologerName,
+                    s.Amount,
+                    s.PayoutMethod,
+                    s.PayoutReference,
+                    s.Status,
+                    s.ProcessedAt,
+                    s.Remarks,
+                    s.CreatedAt
+                FROM dbo.Settlements s
+                JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+                WHERE (@Status IS NULL OR s.Status = @Status)
+                ORDER BY s.CreatedAt DESC";
+
+            var list = (await conn.QueryAsync<SettlementDto>(sql, new { Status = status })).ToList();
+            return Result<IReadOnlyList<SettlementDto>>.Success(list);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load settlements");
+            return Result<IReadOnlyList<SettlementDto>>.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
+        }
+    }
+
+    public async Task<Result> ProcessSettlementAsync(long settlementId, string status, string? payoutReference, string? remarks, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string sql = @"
+                UPDATE dbo.Settlements
+                SET Status = @Status,
+                    PayoutReference = COALESCE(@PayoutReference, PayoutReference),
+                    Remarks = COALESCE(@Remarks, Remarks),
+                    ProcessedAt = GETUTCDATE()
+                WHERE Id = @Id";
+
+            var affected = await conn.ExecuteAsync(sql, new
+            {
+                Id = settlementId,
+                Status = status.ToUpperInvariant(),
+                PayoutReference = payoutReference,
+                Remarks = remarks
+            });
+
+            if (affected == 0)
+            {
+                return Result.Failure("Settlement record not found.", Result.ErrorCodes.NotFound);
+            }
+
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process settlement #{SettlementId}", settlementId);
+            return Result.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
+        }
+    }
+
+    public async Task<Result<IReadOnlyList<AdminUserDto>>> GetUsersAsync(string? search = null, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string sql = @"
+                SELECT 
+                    u.Id,
+                    u.PublicId,
+                    u.DisplayName,
+                    u.Email,
+                    u.PhoneNumber,
+                    ISNULL(w.MainBalance, 0) AS MainBalance,
+                    ISNULL(w.PromotionalBalance, 0) AS PromotionalBalance,
+                    u.IsActive,
+                    u.CreatedAt
+                FROM dbo.UserProfiles u
+                LEFT JOIN dbo.Wallets w ON w.UserId = u.Id
+                WHERE (@Search IS NULL OR u.DisplayName LIKE '%' + @Search + '%' OR u.Email LIKE '%' + @Search + '%' OR u.PhoneNumber LIKE '%' + @Search + '%')
+                ORDER BY u.CreatedAt DESC";
+
+            var users = (await conn.QueryAsync<AdminUserDto>(sql, new { Search = search })).ToList();
+            return Result<IReadOnlyList<AdminUserDto>>.Success(users);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load platform users");
+            return Result<IReadOnlyList<AdminUserDto>>.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
+        }
+    }
+
+    public async Task<Result> ToggleUserStatusAsync(long userId, bool isActive, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string sql = @"
+                UPDATE dbo.UserProfiles
+                SET IsActive = @IsActive, UpdatedAt = GETUTCDATE()
+                WHERE Id = @UserId";
+
+            await conn.ExecuteAsync(sql, new { UserId = userId, IsActive = isActive });
+            return Result.Success();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle status for user #{UserId}", userId);
+            return Result.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
+        }
+    }
+
+    public async Task<Result<IReadOnlyList<AdminConsultationDto>>> GetAllConsultationsAsync(string? status = null, int limit = 100, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string sql = @"
+                SELECT TOP (@Limit)
+                    s.Id,
+                    s.PublicId,
+                    u.DisplayName AS UserName,
+                    a.DisplayName AS AstrologerName,
+                    s.SessionType,
+                    s.Status,
+                    s.DurationSeconds,
+                    s.TotalCharge AS TotalAmount,
+                    ISNULL(pc.CommissionAmount, 0) AS PlatformCommission,
+                    ISNULL(ae.Amount, 0) AS AstrologerEarnings,
+                    s.CreatedAt
+                FROM dbo.ConsultationSessions s
+                JOIN dbo.UserProfiles u ON u.Id = s.UserId
+                JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+                LEFT JOIN dbo.PlatformCommissions pc ON pc.SessionId = s.Id
+                LEFT JOIN dbo.AstrologerEarnings ae ON ae.SessionId = s.Id
+                WHERE (@Status IS NULL OR s.Status = @Status)
+                ORDER BY s.CreatedAt DESC";
+
+            var list = (await conn.QueryAsync<AdminConsultationDto>(sql, new { Status = status, Limit = limit })).ToList();
+            return Result<IReadOnlyList<AdminConsultationDto>>.Success(list);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load global consultation sessions");
+            return Result<IReadOnlyList<AdminConsultationDto>>.Failure(Result.ErrorCodes.DatabaseError, ex.Message);
+        }
+    }
 }

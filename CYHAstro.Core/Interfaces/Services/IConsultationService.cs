@@ -17,4 +17,5 @@ public interface IConsultationService
     Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetIncomingRequestsForAstrologerAsync(long astrologerUserId, CancellationToken ct = default);
     Task<Result<bool>> RejectConsultationAsync(long astrologerUserId, string sessionPublicId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetAstrologerSessionsAsync(long astrologerUserId, string? status = null, int limit = 50, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetUserConsultationsAsync(long userId, int limit = 50, CancellationToken ct = default);
 }
