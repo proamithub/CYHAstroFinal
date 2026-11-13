@@ -66,7 +66,7 @@ public sealed class ConsultationController : Controller
         return RedirectToAction("Index", "Home", new { area = "Astrologer" });
     }
 
-    [HttpGet("Astrologer/Consultation/Room/{id}")]
+    [HttpGet]
     public async Task<IActionResult> Room(string id, CancellationToken ct)
     {
         var userId = GetCurrentUserId();

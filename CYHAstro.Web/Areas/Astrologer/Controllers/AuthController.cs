@@ -116,8 +116,8 @@ public sealed class AuthController : Controller
         return RedirectToAction("Index", "Home", new { area = "Astrologer" });
     }
 
+    [HttpGet]
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync("AstrologerCookie");

@@ -136,6 +136,16 @@ app.MapAreaControllerRoute(
     areaName: "Astrologer",
     pattern: "Astrologer/{controller=Home}/{action=Index}/{id?}");
 
+app.MapControllerRoute(
+    name: "AstrologerLogin",
+    pattern: "Astrologer/Login",
+    defaults: new { area = "Astrologer", controller = "Auth", action = "Login" });
+
+app.MapControllerRoute(
+    name: "AstrologerLogout",
+    pattern: "Astrologer/Logout",
+    defaults: new { area = "Astrologer", controller = "Auth", action = "Logout" });
+
 // 3. Client Area Explicit: /Client/...
 app.MapAreaControllerRoute(
     name: "ClientArea",
