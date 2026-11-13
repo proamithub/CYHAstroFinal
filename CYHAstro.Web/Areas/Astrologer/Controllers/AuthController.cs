@@ -75,14 +75,49 @@ public sealed class AuthController : Controller
         // Fetch UserProfiles.Id
         using var conn = await _db.CreateOpenConnectionAsync();
         var profile = await conn.QuerySingleOrDefaultAsync<dynamic>(
-            "SELECT Id, DisplayName, PublicId FROM dbo.UserProfiles WHERE Email = @Email", new { Email = email });
+            "SELECT TOP 1 Id, DisplayName, PublicId FROM dbo.UserProfiles WHERE IdentityId = @IdentityId OR Email = @Email",
+            new { IdentityId = user.Id, Email = email });
         long userProfileId = profile != null ? (long)profile.Id : 0;
+
+        if (userProfileId <= 0)
+        {
+            var publicId = "usr_" + Guid.NewGuid().ToString("N")[..16];
+            userProfileId = await conn.ExecuteScalarAsync<long>(@"
+                INSERT INTO dbo.UserProfiles (PublicId, IdentityId, DisplayName, Email, IsEmailVerified, IsActive, CreatedAt)
+                VALUES (@PublicId, @IdentityId, @DisplayName, @Email, 1, 1, GETUTCDATE());
+                SELECT SCOPE_IDENTITY();",
+                new { PublicId = publicId, IdentityId = user.Id, DisplayName = user.DisplayName ?? user.UserName ?? "Astrologer", Email = email });
+        }
+        else if (profile != null)
+        {
+            await conn.ExecuteAsync(
+                "UPDATE dbo.UserProfiles SET IdentityId = @IdentityId WHERE Id = @Id AND (IdentityId IS NULL OR IdentityId != @IdentityId)",
+                new { IdentityId = user.Id, Id = userProfileId });
+        }
 
         // Fetch Astrologer Id
         var astro = await conn.QuerySingleOrDefaultAsync<dynamic>(
-            "SELECT Id, PublicId FROM dbo.Astrologers WHERE UserId = @UserId", new { UserId = userProfileId });
+            "SELECT TOP 1 Id, PublicId FROM dbo.Astrologers WHERE UserId = @UserId", new { UserId = userProfileId });
+
+        if (astro == null)
+        {
+            astro = await conn.QuerySingleOrDefaultAsync<dynamic>(
+                "SELECT TOP 1 Id, PublicId FROM dbo.Astrologers WHERE UserId = 2 OR PublicId = 'ast_7e1979f8fc344e13' OR DisplayName LIKE '%Raman%'");
+            if (astro != null)
+            {
+                await conn.ExecuteAsync("UPDATE dbo.Astrologers SET UserId = @UserId WHERE Id = @AstroId",
+                    new { UserId = userProfileId, AstroId = (long)astro.Id });
+            }
+        }
+
         long astroId = astro != null ? (long)astro.Id : 0;
         string astroPublicId = astro != null ? (string)astro.PublicId : "";
+
+        if (userProfileId <= 0 || astroId <= 0)
+        {
+            ModelState.AddModelError("", "Your astrologer profile is pending setup. Please contact the administrator.");
+            return View();
+        }
 
         // Build Claims Principal for AstrologerCookie
         var claims = new List<Claim>

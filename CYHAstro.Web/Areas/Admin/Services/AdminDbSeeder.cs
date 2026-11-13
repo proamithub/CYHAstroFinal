@@ -130,8 +130,33 @@ public static class AdminDbSeeder
 
             using var conn = await db.CreateOpenConnectionAsync();
             var pId = await conn.QuerySingleOrDefaultAsync<long?>(
-                "SELECT Id FROM dbo.UserProfiles WHERE Email = @Email", new { Email = astroEmail });
-            if (pId.HasValue) astroProfileId = pId.Value;
+                "SELECT TOP 1 Id FROM dbo.UserProfiles WHERE IdentityId = @IdentityId OR Email = @Email",
+                new { IdentityId = existingAstro.Id, Email = astroEmail });
+
+            if (pId.HasValue)
+            {
+                astroProfileId = pId.Value;
+                await conn.ExecuteAsync(
+                    "UPDATE dbo.UserProfiles SET IdentityId = @IdentityId, Email = @Email WHERE Id = @Id",
+                    new { IdentityId = existingAstro.Id, Email = astroEmail, Id = astroProfileId });
+            }
+            else
+            {
+                var publicId = "usr_" + Guid.NewGuid().ToString("N")[..16];
+                const string sqlInsertProfile = @"
+                    INSERT INTO dbo.UserProfiles (PublicId, IdentityId, DisplayName, Email, IsEmailVerified, IsActive, CreatedAt)
+                    VALUES (@PublicId, @IdentityId, @DisplayName, @Email, 1, 1, GETUTCDATE());
+                    SELECT SCOPE_IDENTITY();
+                ";
+
+                astroProfileId = await conn.ExecuteScalarAsync<long>(sqlInsertProfile, new
+                {
+                    PublicId = publicId,
+                    IdentityId = existingAstro.Id,
+                    DisplayName = "Acharya Raman Shastri",
+                    Email = astroEmail
+                });
+            }
         }
 
         // Link profile to Astrologers record

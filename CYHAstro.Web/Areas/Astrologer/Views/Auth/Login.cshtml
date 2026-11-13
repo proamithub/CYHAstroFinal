@@ -60,6 +60,19 @@
             <p class="text-secondary small mb-0">Sign in to manage live consultations, accept seeker calls, and track earnings</p>
         </div>
 
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger bg-danger bg-opacity-25 border-danger text-light small py-2 mb-3">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> @TempData["Error"]
+            </div>
+        }
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success bg-success bg-opacity-25 border-success text-light small py-2 mb-3">
+                <i class="fa-solid fa-circle-check me-1"></i> @TempData["Success"]
+            </div>
+        }
+
         @if (!ViewData.ModelState.IsValid)
         {
             <div class="alert alert-danger bg-danger bg-opacity-25 border-danger text-light small py-2 mb-3">
