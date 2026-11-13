@@ -85,7 +85,7 @@ public sealed class ConsultationController : Controller
         using var conn = await _db.CreateOpenConnectionAsync(ct);
         var astro = await conn.QuerySingleOrDefaultAsync<dynamic>(
             "SELECT Id, UserId FROM dbo.Astrologers WHERE UserId = @UserId", new { UserId = userId });
-        if (astro == null || (long)astro.Id != session.AstrologerId)
+        if (astro == null || (long?)astro.Id != session.AstrologerId)
         {
             TempData["Error"] = "You are not authorized for this consultation session.";
             return RedirectToAction("Index", "Home", new { area = "Astrologer" });

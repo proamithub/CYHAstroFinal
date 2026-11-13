@@ -77,15 +77,24 @@ public sealed class AstrologerService : IAstrologerService
         }
 
         // Fetch recent reviews
-        using var conn = await _db.CreateOpenConnectionAsync(ct);
-        const string reviewSql = @"
-            SELECT TOP 10 r.Id, u.DisplayName AS UserName, r.Rating, r.Comment, r.CreatedAt
-            FROM dbo.AstrologerReviews r
-            JOIN dbo.UserProfiles u ON u.Id = r.UserId
-            WHERE r.AstrologerId = @AstrologerId AND r.IsApproved = 1 AND r.IsDeleted = 0
-            ORDER BY r.CreatedAt DESC";
+        var reviews = new List<AstrologerReviewDto>();
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            const string reviewSql = @"
+                SELECT TOP 10 r.Id, u.DisplayName AS UserName, r.Rating, r.Comment, r.CreatedAt
+                FROM dbo.AstrologerReviews r
+                JOIN dbo.UserProfiles u ON u.Id = r.UserId
+                WHERE r.AstrologerId = @AstrologerId AND r.IsApproved = 1 AND r.IsDeleted = 0
+                ORDER BY r.CreatedAt DESC";
 
-        var reviews = (await conn.QueryAsync<AstrologerReviewDto>(reviewSql, new { AstrologerId = astro.Id })).ToList();
+            var rows = await conn.QueryAsync<AstrologerReviewDto>(reviewSql, new { AstrologerId = astro.Id });
+            reviews = rows.ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load reviews for astrologer {AstrologerId}", astro.Id);
+        }
 
         var dto = new AstrologerDetailDto
         {
