@@ -65,20 +65,55 @@ public sealed class ConsultationController : Controller
         return RedirectToAction("Detail", "Astrologer", new { id = astroPublicId, area = "Client" });
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EndSession([FromForm] string sessionPublicId, CancellationToken ct)
+    [HttpGet]
+    public IActionResult EndSession()
     {
-        var userId = GetCurrentUserId();
-        if (userId <= 0) return RedirectToAction("Login", "Auth", new { area = "Client" });
+        return RedirectToAction("Index", "Astrologer", new { area = "Client" });
+    }
 
-        var res = await _consultationService.EndConsultationAsync(userId, sessionPublicId, "USER_END", ct);
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> EndSession([FromForm] string? sessionPublicId, [FromQuery] string? id, CancellationToken ct)
+    {
+        var targetId = !string.IsNullOrWhiteSpace(sessionPublicId) ? sessionPublicId : id;
+        var userId = GetCurrentUserId();
+        if (userId <= 0)
+        {
+            if (Request.Headers["Accept"].ToString().Contains("application/json"))
+                return Unauthorized(new { success = false, message = "Please sign in." });
+
+            return RedirectToAction("Login", "Auth", new { area = "Client" });
+        }
+
+        if (string.IsNullOrWhiteSpace(targetId))
+        {
+            if (Request.Headers["Accept"].ToString().Contains("application/json"))
+                return BadRequest(new { success = false, message = "Session ID is required." });
+
+            return RedirectToAction("Index", "Astrologer", new { area = "Client" });
+        }
+
+        var res = await _consultationService.EndConsultationAsync(userId, targetId, "USER_END", ct);
         if (res.IsSuccess)
         {
+            if (Request.Headers["Accept"].ToString().Contains("application/json"))
+            {
+                return Ok(new
+                {
+                    success = true,
+                    durationSeconds = res.Value!.DurationSeconds,
+                    totalCharge = res.Value.TotalCharge,
+                    remainingBalance = res.Value.UserRemainingBalance
+                });
+            }
+
             TempData["Success"] = $"Consultation ended. Total Duration: {res.Value!.DurationSeconds / 60}m {res.Value.DurationSeconds % 60}s. Billed: ₹{res.Value.TotalCharge:F2}. Remaining Wallet Balance: ₹{res.Value.UserRemainingBalance:F2}";
         }
         else
         {
+            if (Request.Headers["Accept"].ToString().Contains("application/json"))
+                return BadRequest(new { success = false, error = res.Error });
+
             TempData["Error"] = res.Error ?? "Could not finalize session.";
         }
 

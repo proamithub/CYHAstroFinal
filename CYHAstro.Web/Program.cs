@@ -167,6 +167,11 @@ app.MapControllerRoute(
     pattern: "Astrologer/Detail/{id}",
     defaults: new { area = "Client", controller = "Astrologer", action = "Detail" });
 
+app.MapControllerRoute(
+    name: "ClientConsultationEndSessionRoute",
+    pattern: "Consultation/EndSession",
+    defaults: new { area = "Client", controller = "Consultation", action = "EndSession" });
+
 // 3. Client Area Explicit: /Client/...
 app.MapAreaControllerRoute(
     name: "ClientArea",
