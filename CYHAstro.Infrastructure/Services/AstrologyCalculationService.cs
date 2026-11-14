@@ -241,7 +241,42 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
 
         string currentDasha = $"Mahadasha of Jupiter (Guru) - Antardasha of Venus (Shukra)";
 
-        // 5. AI Interpretation via Gemini
+        // 5. Navamsha (D9) Chart Computation
+        var navamshaHouses = new List<KundliHouseDto>();
+        for (int h = 1; h <= 12; h++)
+        {
+            int d9Sign = ((ascendantSignId * 9 + h - 1) % 12) + 1;
+            var d9Planets = planets
+                .Where(p => (((p.SignId * 9 + (int)(p.Longitude / 3.33m)) % 12) + 1) == h)
+                .Select(p => p.PlanetName)
+                .ToList();
+
+            navamshaHouses.Add(new KundliHouseDto
+            {
+                HouseNumber = h,
+                SignId = d9Sign,
+                SignName = ZodiacNames[d9Sign],
+                Degree = 15.0m,
+                PlanetsInHouse = d9Planets
+            });
+        }
+
+        // 6. Yogas & Auspicious Planetary Combinations
+        var yogas = DetectYogas(planets, ascendantSignId);
+
+        // 7. Life Scores (Career, Love, Health, Fortune Gauges)
+        int careerScore = 80 + ((ascendantSignId * 3) % 18);
+        int loveScore = 72 + ((moonSignId * 4) % 22);
+        int healthScore = 78 + ((sunSignId * 3) % 19);
+        int fortuneScore = 82 + (((ascendantSignId + moonSignId) * 3) % 17);
+
+        // 8. Personalized Lucky Elements
+        var (gemstone, color, number, direction, deity, rudraksha) = GetLuckyElements(ascendantSignId);
+
+        // 9. Vimshottari Dasha Timeline (120 Years)
+        var dashaTimeline = BuildDashaTimeline(request.DateOfBirth.Year, nakshatraIndex);
+
+        // 10. AI Interpretation via Gemini
         string? aiText = null;
         if (request.IncludeAiInterpretation)
         {
@@ -255,6 +290,9 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
                 pada,
                 marsHouse,
                 mangalStatus,
+                careerScore,
+                loveScore,
+                yogas = yogas.Select(y => y.Name),
                 planets = planets.Select(p => new { p.PlanetName, p.SignName, p.House })
             });
 
@@ -291,14 +329,212 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
             BirthPada = pada,
             Planets = planets,
             Houses = houses,
+            NavamshaHouses = navamshaHouses,
             MangalDoshaStatus = mangalStatus,
             KaalSarpDoshaStatus = "No Kaal Sarp Dosha",
             SadeSatiStatus = "Not Active",
             CurrentDasha = currentDasha,
-            AiInterpretation = aiText
+            AiInterpretation = aiText,
+            CareerScore = careerScore,
+            LoveScore = loveScore,
+            HealthScore = healthScore,
+            FortuneScore = fortuneScore,
+            LuckyGemstone = gemstone,
+            LuckyColor = color,
+            LuckyNumber = number,
+            LuckyDirection = direction,
+            RulingDeity = deity,
+            RecommendedRudraksha = rudraksha,
+            Yogas = yogas,
+            DashaTimeline = dashaTimeline
         };
 
         return Result<KundliChartDto>.Success(chartDto);
+    }
+
+    private static (string gemstone, string color, string number, string direction, string deity, string rudraksha) GetLuckyElements(int lagna) => lagna switch
+    {
+        1 => ("Red Coral (Moonga)", "Crimson Red & Golden Yellow", "9, 1, 3", "East", "Lord Hanuman / Kartikeya", "3 Mukhi"),
+        2 => ("Diamond (Heera) / White Opal", "White, Cream & Silver", "6, 5, 8", "South-East", "Goddess Mahalakshmi", "6 Mukhi"),
+        3 => ("Emerald (Panna)", "Emerald Green & Light Yellow", "5, 3, 7", "North", "Lord Ganesha / Vishnu", "4 Mukhi"),
+        4 => ("Natural Pearl (Moti)", "Pearl White, Silver & Cream", "2, 7, 9", "North-West", "Lord Shiva / Parvati", "2 Mukhi"),
+        5 => ("Ruby (Manikya)", "Golden Yellow, Saffron & Copper", "1, 4, 9", "East", "Lord Surya / Gayatri Mata", "1 or 12 Mukhi"),
+        6 => ("Emerald (Panna)", "Green & Pastel Yellow", "5, 6, 2", "North", "Lord Ganesha / Saraswati", "4 Mukhi"),
+        7 => ("White Sapphire / Diamond", "Royal Blue, White & Sky Blue", "6, 7, 1", "West", "Goddess Durga / Lakshmi", "6 Mukhi"),
+        8 => ("Red Coral (Moonga)", "Deep Red, Maroon & Saffron", "9, 3, 4", "South", "Lord Hanuman / Shiva", "3 Mukhi"),
+        9 => ("Yellow Sapphire (Pukhraj)", "Golden Yellow, Amber & Mustard", "3, 9, 5", "North-East (Ishaan)", "Lord Vishnu / Brihaspati", "5 Mukhi"),
+        10 => ("Blue Sapphire (Neelam)", "Navy Blue, Dark Grey & Black", "8, 4, 6", "West", "Lord Shani / Bhairava", "7 or 14 Mukhi"),
+        11 => ("Blue Sapphire (Neelam)", "Electric Blue, Cyan & Purple", "8, 7, 3", "West", "Lord Shiva / Shani Dev", "7 Mukhi"),
+        12 => ("Yellow Sapphire (Pukhraj)", "Saffron, Golden & Sea Green", "3, 1, 9", "North-East (Ishaan)", "Lord Vishnu / Narayana", "5 Mukhi"),
+        _ => ("Yellow Sapphire (Pukhraj)", "Golden Yellow", "3, 9", "East", "Lord Ganesha", "5 Mukhi")
+    };
+
+    private static List<KundliYogaDto> DetectYogas(List<KundliPlanetaryPositionDto> planets, int ascendantSignId)
+    {
+        var yogas = new List<KundliYogaDto>();
+
+        var jup = planets.FirstOrDefault(p => p.PlanetName == "Jupiter");
+        var moon = planets.FirstOrDefault(p => p.PlanetName == "Moon");
+        var sun = planets.FirstOrDefault(p => p.PlanetName == "Sun");
+        var merc = planets.FirstOrDefault(p => p.PlanetName == "Mercury");
+        var mars = planets.FirstOrDefault(p => p.PlanetName == "Mars");
+        var venus = planets.FirstOrDefault(p => p.PlanetName == "Venus");
+        var saturn = planets.FirstOrDefault(p => p.PlanetName == "Saturn");
+
+        // 1. Gaja Kesari Yoga
+        if (jup != null && moon != null)
+        {
+            var diff = Math.Abs(jup.House - moon.House);
+            var isKendraFromMoon = diff is 0 or 3 or 6 or 9;
+            var isKendraFromLagna = jup.House is 1 or 4 or 7 or 10;
+            if (isKendraFromMoon || isKendraFromLagna)
+            {
+                yogas.Add(new KundliYogaDto
+                {
+                    Name = "Gaja Kesari Yoga",
+                    SanskritName = "गजकेसरी योग",
+                    Type = "Maha Raj Yoga",
+                    IsAuspicious = true,
+                    Description = "Formed when Jupiter is in a Kendra (quadrant) from Moon or Lagna. Bestows majestic intellect, respected leadership, lasting prosperity, and academic/spiritual authority.",
+                    Impact = "Brings high societal honor, administrative power, and unwavering wisdom."
+                });
+            }
+        }
+
+        // 2. Budhaditya Yoga
+        if (sun != null && merc != null && sun.House == merc.House)
+        {
+            yogas.Add(new KundliYogaDto
+            {
+                Name = "Budhaditya Yoga",
+                SanskritName = "बुधादित्य योग",
+                Type = "Raj Yoga",
+                IsAuspicious = true,
+                Description = $"Formed by the auspicious union of Sun and Mercury in House {sun.House}. Endows razor-sharp intelligence, analytical acumen, professional eloquence, and executive success.",
+                Impact = "Exceptional communicative prowess, analytical skills, and corporate recognition."
+            });
+        }
+
+        // 3. Mahalakshmi Dhana Yoga
+        if (moon != null && mars != null)
+        {
+            if (moon.House == mars.House || Math.Abs(moon.House - mars.House) == 6)
+            {
+                yogas.Add(new KundliYogaDto
+                {
+                    Name = "Mahalakshmi Dhana Yoga",
+                    SanskritName = "महालक्ष्मी धन योग",
+                    Type = "Dhana Yoga",
+                    IsAuspicious = true,
+                    Description = "Formed by the powerful association of Moon and Mars. Blessed by Goddess Lakshmi with financial enterprise, property investments, and commercial success.",
+                    Impact = "Continuous financial influx, wealth accumulation, and self-made assets."
+                });
+            }
+        }
+
+        // 4. Pancha Mahapurusha Yoga (Hamsa, Malavya, Ruchaka)
+        if (jup != null && jup.House is 1 or 4 or 7 or 10 && (jup.SignId is 4 or 9 or 12))
+        {
+            yogas.Add(new KundliYogaDto
+            {
+                Name = "Hamsa Yoga (Pancha Mahapurusha)",
+                SanskritName = "हंस महापुरुष योग",
+                Type = "Pancha Mahapurusha",
+                IsAuspicious = true,
+                Description = "Jupiter exalted or in own house in Kendra. Symbolizes spiritual elevation, revered teacher status, virtuous character, and pure heart.",
+                Impact = "Lifelong respect, noble reputation, and spiritual insight."
+            });
+        }
+
+        if (venus != null && venus.House is 1 or 4 or 7 or 10 && (venus.SignId is 12 or 2 or 7))
+        {
+            yogas.Add(new KundliYogaDto
+            {
+                Name = "Malavya Yoga (Pancha Mahapurusha)",
+                SanskritName = "मालव्य महापुरुष योग",
+                Type = "Pancha Mahapurusha",
+                IsAuspicious = true,
+                Description = "Venus exalted or in own sign in Kendra. Imparts luxurious life, aesthetic elegance, marital ecstasy, vehicles, and artistic talent.",
+                Impact = "Enjoyment of fine luxuries, magnetic charm, and harmonious relationship."
+            });
+        }
+
+        if (mars != null && mars.House is 1 or 4 or 7 or 10 && (mars.SignId is 10 or 1 or 8))
+        {
+            yogas.Add(new KundliYogaDto
+            {
+                Name = "Ruchaka Yoga (Pancha Mahapurusha)",
+                SanskritName = "रुचक महापुरुष योग",
+                Type = "Pancha Mahapurusha",
+                IsAuspicious = true,
+                Description = "Mars exalted or in own sign in Kendra. Bestows indomitable physical courage, decisive command, athletic stamina, and victory over adversaries.",
+                Impact = "Leadership in management, armed forces, engineering, or real estate."
+            });
+        }
+
+        // Always ensure at least 2 distinct auspicious yogas are surfaced
+        if (yogas.Count < 2)
+        {
+            yogas.Add(new KundliYogaDto
+            {
+                Name = "Bhagya Dhana Yoga",
+                SanskritName = "भाग्य धन योग",
+                Type = "Dhana Yoga",
+                IsAuspicious = true,
+                Description = "Strong placement of trine lords (Lakshmi Sthanas 1, 5, 9). Enhances luck in speculation, ancestral wisdom, and opportune life breakthroughs.",
+                Impact = "Favorable destiny, providential help in distress, and family welfare."
+            });
+        }
+
+        return yogas;
+    }
+
+    private static List<DashaPeriodDto> BuildDashaTimeline(int birthYear, int nakshatraIndex)
+    {
+        var lords = new (string Name, string Sanskrit, int Years)[]
+        {
+            ("Ketu", "केतु", 7),
+            ("Venus", "शुक्र", 20),
+            ("Sun", "सूर्य", 6),
+            ("Moon", "चन्द्र", 10),
+            ("Mars", "मंगल", 7),
+            ("Rahu", "राहु", 18),
+            ("Jupiter", "गुरु", 16),
+            ("Saturn", "शनि", 19),
+            ("Mercury", "बुध", 17)
+        };
+
+        int startLordIndex = nakshatraIndex % 9;
+        int currentYear = DateTime.UtcNow.Year;
+        int runningYear = birthYear;
+        var timeline = new List<DashaPeriodDto>();
+
+        for (int i = 0; i < 9; i++)
+        {
+            var lord = lords[(startLordIndex + i) % 9];
+            int endYear = runningYear + lord.Years;
+            bool isCurrent = currentYear >= runningYear && currentYear < endYear;
+
+            timeline.Add(new DashaPeriodDto
+            {
+                PlanetName = lord.Name,
+                SanskritName = lord.Sanskrit,
+                DurationYears = lord.Years,
+                StartYear = runningYear,
+                EndYear = endYear,
+                IsCurrent = isCurrent
+            });
+
+            runningYear = endYear;
+        }
+
+        // If person is older than 120 or before birth, make sure at least one is flagged current
+        if (!timeline.Any(t => t.IsCurrent) && timeline.Count > 4)
+        {
+            timeline[4] = timeline[4] with { IsCurrent = true };
+        }
+
+        return timeline;
     }
 
     public async Task<Result<MatchmakingResultDto>> CalculateMatchmakingAsync(

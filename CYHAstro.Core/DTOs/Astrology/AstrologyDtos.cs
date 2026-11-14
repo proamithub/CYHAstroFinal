@@ -55,6 +55,26 @@ public sealed record KundliHouseDto
     public List<string> PlanetsInHouse { get; init; } = new();
 }
 
+public sealed record KundliYogaDto
+{
+    public string Name { get; init; } = string.Empty;
+    public string SanskritName { get; init; } = string.Empty;
+    public string Type { get; init; } = "Raj Yoga"; // Raj Yoga, Dhana Yoga, Auspicious, Inauspicious
+    public string Description { get; init; } = string.Empty;
+    public bool IsAuspicious { get; init; } = true;
+    public string Impact { get; init; } = string.Empty;
+}
+
+public sealed record DashaPeriodDto
+{
+    public string PlanetName { get; init; } = string.Empty;
+    public string SanskritName { get; init; } = string.Empty;
+    public int StartYear { get; init; }
+    public int EndYear { get; init; }
+    public int DurationYears { get; init; }
+    public bool IsCurrent { get; init; }
+}
+
 public sealed record KundliChartDto
 {
     public string PublicId { get; init; } = string.Empty;
@@ -67,11 +87,30 @@ public sealed record KundliChartDto
     public int BirthPada { get; init; }
     public List<KundliPlanetaryPositionDto> Planets { get; init; } = new();
     public List<KundliHouseDto> Houses { get; init; } = new();
+    public List<KundliHouseDto> NavamshaHouses { get; init; } = new();
     public string MangalDoshaStatus { get; init; } = "No";
     public string KaalSarpDoshaStatus { get; init; } = "No";
     public string SadeSatiStatus { get; init; } = "None";
     public string CurrentDasha { get; init; } = string.Empty;
     public string? AiInterpretation { get; init; }
+
+    // Life Scores (Speedometer / Gauges)
+    public int CareerScore { get; init; } = 85;
+    public int LoveScore { get; init; } = 75;
+    public int HealthScore { get; init; } = 80;
+    public int FortuneScore { get; init; } = 90;
+
+    // Personalized Lucky Elements
+    public string LuckyGemstone { get; init; } = string.Empty;
+    public string LuckyColor { get; init; } = string.Empty;
+    public string LuckyNumber { get; init; } = string.Empty;
+    public string LuckyDirection { get; init; } = string.Empty;
+    public string RulingDeity { get; init; } = string.Empty;
+    public string RecommendedRudraksha { get; init; } = string.Empty;
+
+    // Yogas & Dasha Timeline
+    public List<KundliYogaDto> Yogas { get; init; } = new();
+    public List<DashaPeriodDto> DashaTimeline { get; init; } = new();
 }
 
 public sealed record MatchmakingRequestDto

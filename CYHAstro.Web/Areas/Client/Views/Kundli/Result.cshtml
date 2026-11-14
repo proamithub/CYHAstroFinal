@@ -1,22 +1,65 @@
 @model CYHAstro.Core.DTOs.Astrology.KundliChartDto
 @{
     ViewData["Title"] = $"Janam Kundli - {Model.Name}";
+    var req = ViewBag.KundliRequest as CYHAstro.Core.DTOs.Astrology.KundliRequestDto;
+
+    // Helper abbreviation for planets on SVG
+    string GetShortPlanet(string name) => name switch
+    {
+        "Sun" => "Su",
+        "Moon" => "Mo",
+        "Mars" => "Ma",
+        "Mercury" => "Me",
+        "Jupiter" => "Ju",
+        "Venus" => "Ve",
+        "Saturn" => "Sa",
+        "Rahu" => "Ra",
+        "Ketu" => "Ke",
+        _ => name.Length > 2 ? name.Substring(0, 2) : name
+    };
+
+    // House coordinates on North Indian Diamond SVG (viewBox 0 0 500 500)
+    var houseCoords = new (int numX, int numY, int pX, int pY)[]
+    {
+        (0, 0, 0, 0), // 0 unused
+        (250, 165, 250, 100), // H1 Lagna
+        (140, 85, 130, 48),   // H2
+        (85, 140, 48, 130),   // H3
+        (165, 250, 100, 250), // H4
+        (85, 360, 48, 370),   // H5
+        (140, 415, 130, 455), // H6
+        (250, 335, 250, 400), // H7
+        (360, 415, 370, 455), // H8
+        (415, 360, 452, 370), // H9
+        (335, 250, 400, 250), // H10
+        (415, 140, 452, 130), // H11
+        (360, 85, 370, 48)    // H12
+    };
+
+    var whatsappShareText = Uri.EscapeDataString($"मेरी वैदिक कुण्डली CYHAstro पर देखें! लग्न: {Model.AscendantSign}, राशि: {Model.MoonSign}, नक्षत्र: {Model.BirthNakshatra}। आप भी अपनी 100% फ्री कुण्डली और राजयोग यहाँ देखें: https://cyhastro.patnaorthoclinic.com/Kundli");
 }
 
 <div class="container py-4">
-    <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <!-- Top Action Bar & Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-            <span class="text-warning small fw-bold text-uppercase">Vedic Horoscope Calculation</span>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-warning text-dark fw-bold">VEDIC JANAM KUNDLI</span>
+                <span class="text-secondary small">| Precision Lahiri Ephemeris</span>
+            </div>
             <h2 class="fw-bold text-white brand-font mb-0">Kundli for @Model.Name</h2>
         </div>
-        <div class="d-flex gap-2 mt-3 mt-sm-0 align-items-center">
-            <a asp-action="Index" class="btn btn-outline-gold btn-sm">
-                <i class="fa-solid fa-rotate-left me-1"></i> New Kundli
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <!-- WhatsApp Share Button -->
+            <a href="https://api.whatsapp.com/send?text=@whatsappShareText" target="_blank" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                <i class="fa-brands fa-whatsapp fs-6"></i>
+                <span>Share Kundli</span>
             </a>
-            @if (ViewBag.KundliRequest != null)
+
+            <!-- Download PDF Button -->
+            @if (req != null)
             {
-                var req = (CYHAstro.Core.DTOs.Astrology.KundliRequestDto)ViewBag.KundliRequest;
                 <form asp-action="DownloadPdf" method="post" class="d-inline">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="Name" value="@req.Name" />
@@ -29,173 +72,621 @@
                     <input type="hidden" name="TimeZoneId" value="@req.TimeZoneId" />
                     <input type="hidden" name="ChartStyle" value="@req.ChartStyle" />
                     <input type="hidden" name="Ayanamsha" value="@req.Ayanamsha" />
-                    <button type="submit" class="btn btn-gold btn-sm shadow">
-                        <i class="fa-solid fa-file-pdf me-1"></i> Download PDF Kundli
+                    <button type="submit" class="btn btn-gold btn-sm shadow d-inline-flex align-items-center gap-1">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Download PDF</span>
                     </button>
                 </form>
             }
+
+            <a asp-action="Index" class="btn btn-outline-gold btn-sm">
+                <i class="fa-solid fa-rotate-left me-1"></i> New Kundli
+            </a>
             <button onclick="window.print()" class="btn btn-outline-light btn-sm">
                 <i class="fa-solid fa-print me-1"></i> Print
             </button>
         </div>
     </div>
 
-    <!-- Core Highlights Cards -->
-    <div class="row g-3 text-center mb-4">
-        <div class="col-6 col-md-3">
-            <div class="cosmic-card p-3">
-                <span class="text-secondary small d-block">Ascendant (Lagna)</span>
-                <h5 class="text-warning fw-bold mb-0">@Model.AscendantSign</h5>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="cosmic-card p-3">
-                <span class="text-secondary small d-block">Moon Sign (Rashi)</span>
-                <h5 class="text-info fw-bold mb-0">@Model.MoonSign</h5>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="cosmic-card p-3">
-                <span class="text-secondary small d-block">Sun Sign (Surya)</span>
-                <h5 class="text-warning fw-bold mb-0">@Model.SunSign</h5>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="cosmic-card p-3">
-                <span class="text-secondary small d-block">Birth Nakshatra</span>
-                <h5 class="text-success fw-bold mb-0">@Model.BirthNakshatra <small class="text-secondary">P-@Model.BirthPada</small></h5>
-            </div>
-        </div>
-    </div>
+    <!-- Navigation Pills Tabs -->
+    <ul class="nav nav-pills nav-pills-cosmic gap-2 mb-4 overflow-x-auto flex-nowrap pb-2" id="kundliTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#tab-overview" type="button" role="tab" aria-selected="true">
+                <i class="fa-solid fa-sparkles me-1 text-warning"></i> Overview & Scores
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="charts-tab" data-bs-toggle="pill" data-bs-target="#tab-charts" type="button" role="tab" aria-selected="false">
+                <i class="fa-solid fa-chart-pie me-1 text-info"></i> Vedic Charts (D1/D9)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="yogas-tab" data-bs-toggle="pill" data-bs-target="#tab-yogas" type="button" role="tab" aria-selected="false">
+                <i class="fa-solid fa-crown me-1 text-warning"></i> Yogas (@Model.Yogas.Count)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="dasha-tab" data-bs-toggle="pill" data-bs-target="#tab-dasha" type="button" role="tab" aria-selected="false">
+                <i class="fa-solid fa-timeline me-1 text-success"></i> Dasha Timeline
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="doshas-tab" data-bs-toggle="pill" data-bs-target="#tab-doshas" type="button" role="tab" aria-selected="false">
+                <i class="fa-solid fa-shield me-1 text-danger"></i> Doshas & Remedies
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="ai-tab" data-bs-toggle="pill" data-bs-target="#tab-ai" type="button" role="tab" aria-selected="false">
+                <i class="fa-solid fa-brain me-1 text-info"></i> AI Interpretation
+            </button>
+        </li>
+    </ul>
 
-    <!-- Dosha & Dasha Highlights Bar -->
-    <div class="cosmic-card p-4 mb-4">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-4">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-shield text-warning fs-4"></i>
-                    <div>
-                        <span class="text-secondary small d-block">Mangal Dosha Status</span>
-                        <strong class="text-white">@Model.MangalDoshaStatus</strong>
+    <!-- Tab Content -->
+    <div class="tab-content" id="kundliTabContent">
+
+        <!-- ==========================================
+             TAB 1: OVERVIEW & LIFE SCORES
+             ========================================== -->
+        <div class="tab-pane fade show active" id="tab-overview" role="tabpanel" aria-labelledby="overview-tab">
+            <!-- 4 Life Score Speedometer Circular Gauges -->
+            <div class="cosmic-card p-4 mb-4 border-warning border-opacity-40">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-white brand-font mb-0">
+                        <i class="fa-solid fa-gauge-high text-warning me-2"></i> Celestial Life Vitality Scores
+                    </h5>
+                    <span class="badge bg-dark border border-secondary text-secondary small">Vedic Planetary Synthesis</span>
+                </div>
+
+                <div class="row g-3 text-center">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <div class="score-circle">
+                                <svg viewBox="0 0 36 36" class="circular-chart career">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path class="circle" stroke-dasharray="@Model.CareerScore, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <text x="18" y="20.35" class="percentage">@Model.CareerScore%</text>
+                                </svg>
+                                <span class="score-title">Career & Wealth</span>
+                                <span class="badge bg-info bg-opacity-25 text-info mt-1" style="font-size: 0.65rem;">Excellent</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <div class="score-circle">
+                                <svg viewBox="0 0 36 36" class="circular-chart love">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path class="circle" stroke-dasharray="@Model.LoveScore, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <text x="18" y="20.35" class="percentage">@Model.LoveScore%</text>
+                                </svg>
+                                <span class="score-title">Love & Marriage</span>
+                                <span class="badge bg-danger bg-opacity-25 text-danger mt-1" style="font-size: 0.65rem;">Harmonious</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <div class="score-circle">
+                                <svg viewBox="0 0 36 36" class="circular-chart health">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path class="circle" stroke-dasharray="@Model.HealthScore, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <text x="18" y="20.35" class="percentage">@Model.HealthScore%</text>
+                                </svg>
+                                <span class="score-title">Health & Vitality</span>
+                                <span class="badge bg-success bg-opacity-25 text-success mt-1" style="font-size: 0.65rem;">Robust</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <div class="score-circle">
+                                <svg viewBox="0 0 36 36" class="circular-chart fortune">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <path class="circle" stroke-dasharray="@Model.FortuneScore, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                    <text x="18" y="20.35" class="percentage">@Model.FortuneScore%</text>
+                                </svg>
+                                <span class="score-title">Fortune & Luck</span>
+                                <span class="badge bg-warning bg-opacity-25 text-warning mt-1" style="font-size: 0.65rem;">Auspicious</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-infinity text-info fs-4"></i>
-                    <div>
-                        <span class="text-secondary small d-block">Kaal Sarp Status</span>
-                        <strong class="text-white">@Model.KaalSarpDoshaStatus</strong>
+
+            <!-- Core Highlights Row -->
+            <div class="row g-3 text-center mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="cosmic-card p-3 h-100">
+                        <span class="text-secondary small d-block">Ascendant (Lagna)</span>
+                        <h5 class="text-warning fw-bold mb-0">@Model.AscendantSign</h5>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cosmic-card p-3 h-100">
+                        <span class="text-secondary small d-block">Moon Sign (Rashi)</span>
+                        <h5 class="text-info fw-bold mb-0">@Model.MoonSign</h5>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cosmic-card p-3 h-100">
+                        <span class="text-secondary small d-block">Sun Sign (Surya)</span>
+                        <h5 class="text-warning fw-bold mb-0">@Model.SunSign</h5>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="cosmic-card p-3 h-100">
+                        <span class="text-secondary small d-block">Birth Nakshatra</span>
+                        <h5 class="text-success fw-bold mb-0">@Model.BirthNakshatra <small class="text-secondary">P-@Model.BirthPada</small></h5>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-timeline text-success fs-4"></i>
-                    <div>
-                        <span class="text-secondary small d-block">Current Operating Dasha</span>
-                        <strong class="text-white small">@Model.CurrentDasha</strong>
+
+            <!-- Personalized Lucky Elements Card -->
+            <div class="cosmic-card p-4 mb-4 border-warning border-opacity-30">
+                <h5 class="fw-bold text-white brand-font mb-3">
+                    <i class="fa-solid fa-gem text-warning me-2"></i> Personalized Auspicious Elements
+                </h5>
+                <div class="row g-3">
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-gem text-warning me-1"></i> Lucky Gemstone</span>
+                            <strong class="text-white fs-6">@Model.LuckyGemstone</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-palette text-info me-1"></i> Auspicious Colors</span>
+                            <strong class="text-white fs-6">@Model.LuckyColor</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-dice text-success me-1"></i> Favorable Numbers</span>
+                            <strong class="text-warning fs-6">@Model.LuckyNumber</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-compass text-danger me-1"></i> Auspicious Direction</span>
+                            <strong class="text-white fs-6">@Model.LuckyDirection</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-om text-warning me-1"></i> Ruling Deity (Ishta)</span>
+                            <strong class="text-white fs-6">@Model.RulingDeity</strong>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="p-3 rounded bg-dark border border-secondary border-opacity-25 h-100">
+                            <span class="text-secondary small d-block"><i class="fa-solid fa-dharmachakra text-warning me-1"></i> Recommended Rudraksha</span>
+                            <strong class="text-white fs-6">@Model.RecommendedRudraksha</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Dosha Overview Strip -->
+            <div class="cosmic-card p-3 mb-4">
+                <div class="row g-3 align-items-center text-center text-md-start">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                            <i class="fa-solid fa-shield text-warning fs-4"></i>
+                            <div>
+                                <span class="text-secondary small d-block">Mangal Dosha Status</span>
+                                <strong class="text-white">@Model.MangalDoshaStatus</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                            <i class="fa-solid fa-infinity text-info fs-4"></i>
+                            <div>
+                                <span class="text-secondary small d-block">Kaal Sarp Status</span>
+                                <strong class="text-white">@Model.KaalSarpDoshaStatus</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                            <i class="fa-solid fa-timeline text-success fs-4"></i>
+                            <div>
+                                <span class="text-secondary small d-block">Current Operating Dasha</span>
+                                <strong class="text-white small">@Model.CurrentDasha</strong>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Gemini AI Synthesis -->
-    @if (!string.IsNullOrWhiteSpace(Model.AiInterpretation))
-    {
-        <div class="cosmic-card p-4 p-md-5 mb-4 border-warning border-opacity-40">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <span class="fs-4 text-warning"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                <h5 class="fw-bold text-white brand-font mb-0">AI Astrological Synthesis (Grounded in Vedic Positions)</h5>
+        <!-- ==========================================
+             TAB 2: VEDIC CHARTS (D1 LAGNA & D9 NAVAMSHA)
+             ========================================== -->
+        <div class="tab-pane fade" id="tab-charts" role="tabpanel" aria-labelledby="charts-tab">
+            <div class="row g-4 mb-4">
+                <!-- SVG Visual Diamond Kundli Chart -->
+                <div class="col-lg-6">
+                    <div class="cosmic-card p-4 h-100 border-warning border-opacity-40">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold text-white brand-font mb-0">
+                                <i class="fa-solid fa-diamond text-warning me-2"></i> Vedic Kundli Chakra
+                            </h5>
+                            <!-- D1 / D9 Toggle Switch -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-gold btn-sm" id="btnShowD1" onclick="switchChart('d1')">Lagna (D1)</button>
+                                <button type="button" class="btn btn-outline-gold btn-sm" id="btnShowD9" onclick="switchChart('d9')">Navamsha (D9)</button>
+                            </div>
+                        </div>
+
+                        <!-- North Indian Diamond SVG Chart -->
+                        <div class="kundli-chart-wrapper my-2">
+                            <!-- D1 Chart SVG -->
+                            <div id="chartD1Container">
+                                <svg viewBox="0 0 500 500" class="kundli-svg">
+                                    <!-- Outer frame -->
+                                    <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                    <!-- Inner Diamond connecting midpoints -->
+                                    <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                    <!-- Diagonals -->
+                                    <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                    <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                    <!-- House Numbers and Planets for D1 -->
+                                    @for (int h = 1; h <= 12; h++)
+                                    {
+                                        var house = Model.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                        var coords = houseCoords[h];
+                                        if (house != null)
+                                        {
+                                            @:<!-- Rashi number and planets for H@(h) -->
+                                            @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                            @if (house.PlanetsInHouse.Any())
+                                            {
+                                                var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                                @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                            }
+                                        }
+                                    }
+                                </svg>
+                                <div class="text-center mt-2 small text-warning fw-bold">Lagna Chart (D1) - Body, Personality & Life Foundation</div>
+                            </div>
+
+                            <!-- D9 Chart SVG (Hidden by default) -->
+                            <div id="chartD9Container" class="d-none">
+                                <svg viewBox="0 0 500 500" class="kundli-svg">
+                                    <!-- Outer frame -->
+                                    <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                    <!-- Inner Diamond connecting midpoints -->
+                                    <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                    <!-- Diagonals -->
+                                    <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                    <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                    <!-- House Numbers and Planets for D9 -->
+                                    @for (int h = 1; h <= 12; h++)
+                                    {
+                                        var house = Model.NavamshaHouses.FirstOrDefault(x => x.HouseNumber == h) ?? Model.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                        var coords = houseCoords[h];
+                                        if (house != null)
+                                        {
+                                            @:<!-- Rashi number and planets for H@(h) -->
+                                            @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                            @if (house.PlanetsInHouse.Any())
+                                            {
+                                                var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                                @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                            }
+                                        }
+                                    }
+                                </svg>
+                                <div class="text-center mt-2 small text-info fw-bold">Navamsha Chart (D9) - Destiny, Marriage & Spiritual Strength</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9 Nava Grahas Planetary Table -->
+                <div class="col-lg-6">
+                    <div class="cosmic-card p-4 h-100">
+                        <h5 class="fw-bold text-white brand-font mb-3">
+                            <i class="fa-solid fa-table-cells text-warning me-2"></i> Planetary Positions (Nava Grahas)
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover mb-0 small">
+                                <thead>
+                                    <tr class="text-secondary border-secondary">
+                                        <th>Planet</th>
+                                        <th>Sanskrit</th>
+                                        <th>Sign</th>
+                                        <th>House</th>
+                                        <th>Degree</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in Model.Planets)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-warning">@p.PlanetName</td>
+                                            <td>@p.SanskritName</td>
+                                            <td>@p.SignName</td>
+                                            <td>House @p.House</td>
+                                            <td>@p.Longitude°</td>
+                                            <td>
+                                                @if (p.IsRetrograde)
+                                                {
+                                                    <span class="badge bg-danger text-white">Retrograde</span>
+                                                }
+                                                else if (p.IsCombust)
+                                                {
+                                                    <span class="badge bg-warning text-dark">Combust</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary text-light">Direct</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="text-light leading-relaxed mb-0">
-                @Model.AiInterpretation
-            </p>
-        </div>
-    }
 
-    <!-- 9 Grahas Table -->
-    <div class="cosmic-card p-4 mb-4">
-        <h5 class="fw-bold text-white brand-font mb-3">
-            <i class="fa-solid fa-table-cells text-warning me-2"></i> Planetary Positions (Nava Grahas)
-        </h5>
-        <div class="table-responsive">
-            <table class="table table-dark table-hover mb-0 small">
-                <thead>
-                    <tr class="text-secondary border-secondary">
-                        <th>Planet</th>
-                        <th>Sanskrit</th>
-                        <th>Sign (Rashi)</th>
-                        <th>House (Bhava)</th>
-                        <th>Nakshatra</th>
-                        <th>Pada</th>
-                        <th>Longitude</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in Model.Planets)
+            <!-- 12 Bhavas (Houses) Breakdown -->
+            <div class="cosmic-card p-4 mb-4">
+                <h5 class="fw-bold text-white brand-font mb-3">
+                    <i class="fa-solid fa-house text-warning me-2"></i> 12 Bhavas (House Breakdown)
+                </h5>
+                <div class="row g-3">
+                    @foreach (var h in Model.Houses)
                     {
-                        <tr>
-                            <td class="fw-bold text-warning">@p.PlanetName</td>
-                            <td>@p.SanskritName</td>
-                            <td>@p.SignName</td>
-                            <td>House @p.House</td>
-                            <td>@p.Nakshatra</td>
-                            <td>@p.Pada</td>
-                            <td>@p.Longitude°</td>
-                            <td>
-                                @if (p.IsRetrograde)
-                                {
-                                    <span class="badge bg-danger text-white">Retrograde</span>
-                                }
-                                else if (p.IsCombust)
-                                {
-                                    <span class="badge bg-warning text-dark">Combust</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary text-light">Direct</span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- 12 Bhavas (Houses) -->
-    <div class="cosmic-card p-4 mb-4">
-        <h5 class="fw-bold text-white brand-font mb-3">
-            <i class="fa-solid fa-house text-warning me-2"></i> 12 Bhavas (Vedic House Breakdown)
-        </h5>
-        <div class="row g-3">
-            @foreach (var h in Model.Houses)
-            {
-                <div class="col-sm-6 col-md-4 col-lg-3">
-                    <div class="p-3 rounded bg-dark border border-secondary border-opacity-30 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-warning small">House @h.HouseNumber</span>
-                            <span class="badge bg-secondary small">@h.SignName</span>
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <div class="p-3 rounded bg-dark border border-secondary border-opacity-30 h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-warning small">House @h.HouseNumber</span>
+                                    <span class="badge bg-secondary small">@h.SignName</span>
+                                </div>
+                                <span class="text-secondary small d-block">Degree: @h.Degree°</span>
+                                <div class="mt-2 small text-light">
+                                    <strong>Planets:</strong> @(h.PlanetsInHouse.Any() ? string.Join(", ", h.PlanetsInHouse) : "None")
+                                </div>
+                            </div>
                         </div>
-                        <span class="text-secondary small d-block">Degree: @h.Degree°</span>
-                        <div class="mt-2 small text-light">
-                            <strong>Planets:</strong> @(h.PlanetsInHouse.Any() ? string.Join(", ", h.PlanetsInHouse) : "None")
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 3: YOGAS & PLANETARY COMBINATIONS
+             ========================================== -->
+        <div class="tab-pane fade" id="tab-yogas" role="tabpanel" aria-labelledby="yogas-tab">
+            <div class="cosmic-card p-4 mb-4 border-warning border-opacity-40">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <span class="badge bg-warning text-dark fw-bold mb-1">AUSPICIOUS YOGAS DETECTED</span>
+                        <h4 class="fw-bold text-white brand-font mb-0">Special Astrological Yogas in Your Kundli</h4>
+                    </div>
+                    <span class="badge bg-dark border border-warning text-warning fs-6 px-3 py-2">
+                        @Model.Yogas.Count Active Yogas
+                    </span>
+                </div>
+
+                <div class="row g-4">
+                    @foreach (var yoga in Model.Yogas)
+                    {
+                        <div class="col-md-6">
+                            <div class="p-4 rounded bg-dark border @(yoga.IsAuspicious ? "border-warning border-opacity-50" : "border-danger border-opacity-50") h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h5 class="fw-bold text-white mb-0">@yoga.Name</h5>
+                                            <span class="text-warning small">(@yoga.SanskritName)</span>
+                                        </div>
+                                        <span class="badge bg-warning text-dark fw-bold">@yoga.Type</span>
+                                    </div>
+                                    <p class="text-light small mb-3">
+                                        @yoga.Description
+                                    </p>
+                                    <div class="p-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-25 mb-3">
+                                        <span class="text-secondary small d-block"><i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Astrological Impact:</span>
+                                        <span class="text-warning small fw-semibold">@yoga.Impact</span>
+                                    </div>
+                                </div>
+
+                                <div class="pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                                    <span class="text-secondary small">Want to know when it activates?</span>
+                                    <a asp-controller="Astrologer" asp-action="Index" class="btn btn-outline-gold btn-sm">
+                                        <i class="fa-solid fa-comments me-1"></i> Ask Astrologer
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 4: DASHA TIMELINE (VIMSHOTTARI 120 YRS)
+             ========================================== -->
+        <div class="tab-pane fade" id="tab-dasha" role="tabpanel" aria-labelledby="dasha-tab">
+            <div class="cosmic-card p-4 mb-4 border-warning border-opacity-40">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-success bg-opacity-25 text-success fw-bold mb-1">VIMSHOTTARI 120-YEAR CYCLE</span>
+                        <h4 class="fw-bold text-white brand-font mb-0">Vimshottari Mahadasha Progression Timeline</h4>
+                    </div>
+                    <span class="badge bg-dark border border-secondary text-secondary small">Calculated from @Model.BirthNakshatra</span>
+                </div>
+                <p class="text-secondary small mb-4">
+                    The Vimshottari Dasha system maps the 120-year planetary progression of destiny. Your active period determines the overarching planetary influences on your career, health, and personal relationships.
+                </p>
+
+                <!-- Dasha Timeline Horizontal Cards -->
+                <div class="dasha-timeline-container mb-4">
+                    @foreach (var d in Model.DashaTimeline)
+                    {
+                        <div class="dasha-card @(d.IsCurrent ? "current" : "")">
+                            @if (d.IsCurrent)
+                            {
+                                <span class="badge bg-warning text-dark position-absolute top-0 start-50 translate-middle fw-bold" style="font-size: 0.6rem;">
+                                    ACTIVE NOW
+                                </span>
+                            }
+                            <h6 class="fw-bold text-white mb-0 mt-1">@d.PlanetName</h6>
+                            <span class="text-warning small d-block mb-1">@d.SanskritName</span>
+                            <span class="text-secondary small d-block">@d.DurationYears yrs</span>
+                            <div class="mt-2 pt-2 border-top border-secondary border-opacity-25">
+                                <span class="@(d.IsCurrent ? "text-warning fw-bold" : "text-light") small font-monospace">@d.StartYear - @d.EndYear</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Active Dasha Consultation Banner -->
+                <div class="p-3 rounded bg-dark border border-warning border-opacity-40 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fs-2 text-warning"><i class="fa-solid fa-hourglass-half fa-spin" style="--fa-animation-duration: 15s;"></i></span>
+                        <div>
+                            <strong class="text-white d-block">Currently Running: @Model.CurrentDasha</strong>
+                            <span class="text-secondary small">Consult our Vedic astrologers to know your specific Antardasha, Pratyantardasha, and remedial mantras.</span>
                         </div>
                     </div>
+                    <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold btn-sm px-4 py-2">
+                        <i class="fa-solid fa-phone me-1"></i> Consult for Dasha Remedies
+                    </a>
                 </div>
-            }
+            </div>
         </div>
+
+        <!-- ==========================================
+             TAB 5: DOSHAS & REMEDIES
+             ========================================== -->
+        <div class="tab-pane fade" id="tab-doshas" role="tabpanel" aria-labelledby="doshas-tab">
+            <div class="row g-4 mb-4">
+                <!-- Mangal Dosha Card -->
+                <div class="col-md-4">
+                    <div class="cosmic-card p-4 h-100 border-warning border-opacity-40 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fs-2 text-danger"><i class="fa-solid fa-fire"></i></span>
+                                <span class="badge @(Model.MangalDoshaStatus.Contains("No") ? "bg-success" : "bg-warning text-dark") fw-bold">
+                                    @Model.MangalDoshaStatus
+                                </span>
+                            </div>
+                            <h5 class="fw-bold text-white mb-2">Mangal Dosha (Kuja Dosha)</h5>
+                            <p class="text-secondary small mb-3">
+                                Occurs when Mars is positioned in houses 1, 4, 7, 8, or 12. Influences marital temperament, emotional intensity, and mutual adjustment.
+                            </p>
+                        </div>
+                        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-outline-gold btn-sm w-100">
+                            <i class="fa-solid fa-comments me-1"></i> Mangal Shanti Remedies
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Kaal Sarp Dosha Card -->
+                <div class="col-md-4">
+                    <div class="cosmic-card p-4 h-100 border-info border-opacity-40 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fs-2 text-info"><i class="fa-solid fa-infinity"></i></span>
+                                <span class="badge bg-success fw-bold">@Model.KaalSarpDoshaStatus</span>
+                            </div>
+                            <h5 class="fw-bold text-white mb-2">Kaal Sarp Dosha</h5>
+                            <p class="text-secondary small mb-3">
+                                Occurs when all 7 planets are hemmed between Rahu and Ketu. Evaluates struggles in early adulthood, karmic hurdles, and spiritual transformation.
+                            </p>
+                        </div>
+                        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-outline-gold btn-sm w-100">
+                            <i class="fa-solid fa-comments me-1"></i> Kaal Sarp Guidance
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Sade Sati Status Card -->
+                <div class="col-md-4">
+                    <div class="cosmic-card p-4 h-100 border-secondary border-opacity-40 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fs-2 text-warning"><i class="fa-solid fa-ring"></i></span>
+                                <span class="badge bg-secondary fw-bold">@Model.SadeSatiStatus</span>
+                            </div>
+                            <h5 class="fw-bold text-white mb-2">Shani Sade Sati Status</h5>
+                            <p class="text-secondary small mb-3">
+                                Saturn's 7.5-year transit through the 12th, 1st, and 2nd houses from natal Moon. Represents profound karmic lessons, perseverance, and maturity.
+                            </p>
+                        </div>
+                        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-outline-gold btn-sm w-100">
+                            <i class="fa-solid fa-comments me-1"></i> Shani Shanti Remedies
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 6: GEMINI AI SYNTHESIS
+             ========================================== -->
+        <div class="tab-pane fade" id="tab-ai" role="tabpanel" aria-labelledby="ai-tab">
+            <div class="cosmic-card p-4 p-md-5 mb-4 border-warning border-opacity-40">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="fs-4 text-warning"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                    <h5 class="fw-bold text-white brand-font mb-0">Google Gemini AI Astrological Synthesis</h5>
+                </div>
+                <p class="text-secondary small mb-4">
+                    Grounded in authentic Parashari principles, Lahiri planetary longitudes, and House lordships.
+                </p>
+                <div class="p-4 rounded bg-dark border border-secondary border-opacity-40">
+                    <p class="text-light leading-relaxed mb-0" style="font-size: 1.05rem; line-height: 1.8;">
+                        @(Model.AiInterpretation ?? "An auspicious chart characterized by a strong Lagna and Nakshatra foundation. Bestows natural leadership qualities, analytical foresight, and perseverance. Professional growth flourishes in strategic and advisory domains.")
+                    </p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Talk to Astrologer CTA -->
-    <div class="p-4 rounded bg-dark border border-warning border-opacity-30 text-center">
-        <h5 class="fw-bold text-white mb-2">Want a Deep Dive Consultation on this Kundli?</h5>
-        <p class="text-secondary small mb-3">Our verified astrologers can analyze specific career yogas, marriage timing, and recommend personalized gemstones and remedies.</p>
-        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold px-4 py-2">
+    <!-- Bottom Global Astrologer Call-to-Action -->
+    <div class="p-4 rounded-4 bg-dark border border-warning border-opacity-40 text-center mt-5 shadow">
+        <h4 class="fw-bold text-white brand-font mb-2">Want a Deep Dive Consultation on this Kundli?</h4>
+        <p class="text-secondary small mb-4 mx-auto" style="max-width: 650px;">
+            Our verified Vedic scholars can analyze your specific career yogas, marriage timing, and recommend personalized gemstones and Vedic remedies.
+        </p>
+        <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold btn-lg px-5 py-3 shadow">
             <i class="fa-solid fa-comments me-2"></i> Talk to Astrologer for Detailed Analysis
         </a>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function switchChart(chartType) {
+            const d1Box = document.getElementById("chartD1Container");
+            const d9Box = document.getElementById("chartD9Container");
+            const btnD1 = document.getElementById("btnShowD1");
+            const btnD9 = document.getElementById("btnShowD9");
+
+            if (chartType === "d1") {
+                d1Box.classList.remove("d-none");
+                d9Box.classList.add("d-none");
+                btnD1.className = "btn btn-gold btn-sm";
+                btnD9.className = "btn btn-outline-gold btn-sm";
+            } else {
+                d1Box.classList.add("d-none");
+                d9Box.classList.remove("d-none");
+                btnD1.className = "btn btn-outline-gold btn-sm";
+                btnD9.className = "btn btn-gold btn-sm";
+            }
+        }
+    </script>
+}
