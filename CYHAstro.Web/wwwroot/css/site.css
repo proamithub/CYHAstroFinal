@@ -1,5 +1,5 @@
 /* CYHAstro — Cosmic Vedic Luxury Theme */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cinzel:wght@600;700;800&display=swap');
+/* Google Fonts are loaded asynchronously via HTML <link> tags in _Layout for optimal Core Web Vitals */
 
 :root {
     --bg-cosmic: #0a0d14;
@@ -216,4 +216,217 @@ body {
     border-top: 1px solid var(--border-subtle);
     margin-top: auto;
     padding: 3rem 0 1.5rem 0;
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS & CORE WEB VITALS OPTIMIZATIONS
+   ========================================================================== */
+
+/* 1. Global Viewport & Containment */
+html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* 2. Touch Responsiveness (Eliminate 300ms tap delay) */
+a, button, input, select, textarea, .btn, .nav-link, .zodiac-badge, .dropdown-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 3. Prevent iOS Safari auto-zoom on input focus (< 16px font causes zoom) */
+@media screen and (max-width: 767px) {
+    input, select, textarea, .form-control, .form-control-cosmic, .form-select {
+        font-size: 16px !important;
+    }
+}
+
+/* 4. Touch Targets: Minimum 44px height for interactive elements on mobile */
+@media screen and (max-width: 767px) {
+    .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-sm {
+        min-height: 38px;
+    }
+    .navbar-cosmic .nav-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* 5. Mobile Glassmorphism Navbar Collapse */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background: rgba(10, 13, 20, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        margin-top: 0.75rem;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+    }
+    .navbar-cosmic .nav-link {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+    }
+    .navbar-cosmic .nav-link:hover, .navbar-cosmic .nav-link.active {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--gold-primary);
+    }
+    .navbar-collapse .d-flex.align-items-center.gap-3 {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .navbar-collapse .d-flex.align-items-center.gap-3 .wallet-pill,
+    .navbar-collapse .d-flex.align-items-center.gap-3 .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+}
+
+/* 6. Zodiac Horizontal Touch-Scroll for Mobile */
+.zodiac-scroll-container {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.5rem 0.25rem 1rem 0.25rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 158, 11, 0.3) transparent;
+}
+.zodiac-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+.zodiac-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.zodiac-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(245, 158, 11, 0.3);
+    border-radius: 9999px;
+}
+.zodiac-scroll-container .zodiac-badge {
+    flex-shrink: 0;
+    scroll-snap-align: start;
+}
+@media (min-width: 992px) {
+    .zodiac-scroll-container {
+        flex-wrap: wrap;
+        justify-content: center;
+        overflow-x: visible;
+    }
+}
+
+/* 7. Responsive Consultation Room Counters & Video */
+.consultation-counters {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 1rem;
+    padding: 0.5rem 1.5rem;
+}
+@media (max-width: 767px) {
+    .consultation-counters {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 0.25rem !important;
+        padding: 0.5rem 0.5rem !important;
+    }
+    .consultation-counters > div {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+        border-left: none !important;
+    }
+    .consultation-counters .fs-5 {
+        font-size: 0.95rem !important;
+    }
+    .consultation-counters .small {
+        font-size: 0.65rem !important;
+    }
+    #videoContainer {
+        height: 290px !important;
+        min-height: 290px !important;
+    }
+    #localParticipantCard {
+        width: 100px !important;
+        height: 70px !important;
+        margin: 0.5rem !important;
+    }
+}
+
+/* 8. Mobile Bottom Navigation Bar (Sticky Thumb-Accessible) */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(10, 13, 20, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1040;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+}
+.mobile-bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    transition: color 0.2s ease;
+    flex: 1;
+}
+.mobile-bottom-nav a i {
+    font-size: 1.15rem;
+    margin-bottom: 2px;
+}
+.mobile-bottom-nav a.active,
+.mobile-bottom-nav a:hover {
+    color: var(--gold-primary);
+}
+.mobile-bottom-nav a.active i {
+    color: var(--gold-primary);
+}
+@media (max-width: 767px) {
+    body {
+        padding-bottom: 65px;
+    }
+}
+
+/* 9. Responsive Headings & Hero Spacing */
+@media (max-width: 767px) {
+    .display-4 {
+        font-size: 2rem !important;
+        line-height: 1.25 !important;
+    }
+    .display-5 {
+        font-size: 1.7rem !important;
+        line-height: 1.25 !important;
+    }
+    .hero-gradient {
+        padding: 2rem 0 1.5rem 0 !important;
+    }
 }

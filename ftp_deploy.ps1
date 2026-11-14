@@ -34,7 +34,7 @@ $s.Close()
 Write-Host "app_offline.htm uploaded - site offline"
 Start-Sleep -Seconds 2
 
-# Upload all DLLs + PDBs
+# Upload all DLLs + PDBs + Static Assets
 Upload-File (Join-Path $localPublish 'CYHAstro.Web.dll') 'CYHAstro.Web.dll'
 Upload-File (Join-Path $localPublish 'CYHAstro.Web.pdb') 'CYHAstro.Web.pdb'
 Upload-File (Join-Path $localPublish 'CYHAstro.Infrastructure.dll') 'CYHAstro.Infrastructure.dll'
@@ -42,7 +42,10 @@ Upload-File (Join-Path $localPublish 'CYHAstro.Infrastructure.pdb') 'CYHAstro.In
 Upload-File (Join-Path $localPublish 'CYHAstro.Core.dll') 'CYHAstro.Core.dll'
 Upload-File (Join-Path $localPublish 'CYHAstro.Core.pdb') 'CYHAstro.Core.pdb'
 
-Write-Host "All DLLs uploaded successfully!"
+# Upload updated site.css for mobile & speed optimizations
+Upload-File (Join-Path $localPublish 'wwwroot\css\site.css') 'wwwroot/css/site.css'
+
+Write-Host "All DLLs and CSS uploaded successfully!"
 
 # Remove app_offline.htm
 $uri3 = [System.Uri]("$ftpHost$remotePath/app_offline.htm")

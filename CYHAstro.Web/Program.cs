@@ -93,6 +93,22 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<CYHAstro.Web.Workers.StaleSessionWorker>();
 
+// ── HTTP Response Compression (Brotli + Gzip for Ultra Fast Mobile Speed) ──
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+});
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
 // ── MVC Controllers with Views ──
 builder.Services.AddControllersWithViews();
 
@@ -116,8 +132,20 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseResponseCompression();
+
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// Cache static files (CSS, JS, images, fonts) for 30 days for maximum loading speed
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        const int durationInSeconds = 60 * 60 * 24 * 30; // 30 days
+        ctx.Context.Response.Headers[Microsoft.Net.Http.Headers.HeaderNames.CacheControl] =
+            $"public,max-age={durationInSeconds}";
+    }
+});
 
 app.UseRouting();
 
