@@ -113,6 +113,25 @@ public sealed class WalletController : Controller
         return Ok(new { received = true });
     }
 
+    [HttpGet("balance")]
+    [HttpGet("Client/Wallet/balance")]
+    [HttpGet("Wallet/balance")]
+    [HttpGet("api/wallet/balance")]
+    public async Task<IActionResult> GetBalance(CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return Unauthorized(new { error = "Not authenticated" });
+
+        var result = await _walletService.GetBalanceAsync(userId, ct);
+        if (!result.IsSuccess) return Ok(new { totalBalance = 0m, paidBalance = 0m, bonusBalance = 0m });
+
+        return Ok(new {
+            totalBalance = result.Value!.TotalBalance,
+            paidBalance = result.Value.PaidBalance,
+            bonusBalance = result.Value.BonusBalance
+        });
+    }
+
     private long GetCurrentUserId()
     {
         var val = User.FindFirstValue("userId");

@@ -247,7 +247,7 @@
         <script>
             // Live Wallet Balance & Notifications Fetch
             document.addEventListener("DOMContentLoaded", function () {
-                fetch('/api/v1/wallet')
+                fetch('/Client/Wallet/balance')
                     .then(res => res.ok ? res.json() : null)
                     .then(data => {
                         if (data && data.totalBalance !== undefined) {
@@ -256,6 +256,19 @@
                         }
                     })
                     .catch(() => {});
+
+                // Auto-refresh wallet balance every 60 seconds
+                setInterval(function() {
+                    fetch('/Client/Wallet/balance')
+                        .then(res => res.ok ? res.json() : null)
+                        .then(data => {
+                            if (data && data.totalBalance !== undefined) {
+                                const elem = document.getElementById("navWalletBalance");
+                                if (elem) elem.innerText = parseFloat(data.totalBalance).toFixed(2);
+                            }
+                        })
+                        .catch(() => {});
+                }, 60000);
 
                 loadNotifications();
             });

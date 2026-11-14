@@ -91,6 +91,7 @@ builder.Services.AddAuthorization(options =>
 
 // ── Real-Time SignalR Engine ──
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<CYHAstro.Web.Workers.StaleSessionWorker>();
 
 // ── MVC Controllers with Views ──
 builder.Services.AddControllersWithViews();

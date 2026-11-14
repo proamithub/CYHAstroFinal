@@ -218,17 +218,20 @@
 @section Scripts {
     <!-- SignalR Client Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
-    <!-- LiveKit Client SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 
     <script>
         const sessionPublicId = "@Model.PublicId";
+        const sessionType = "@Model.SessionType";
+        const sessionStatus = "@Model.Status";
         const ratePerMinute = @Model.RatePerMinute;
         const commissionPct = 20.0; // 20% platform commission
         let elapsedSeconds = @Model.DurationSeconds;
         let timerInterval = null;
+        let timerStarted = false;
 
         function startAstroTimer() {
+            if (timerStarted) return;
+            timerStarted = true;
             timerInterval = setInterval(() => {
                 elapsedSeconds++;
                 const mins = Math.floor(elapsedSeconds / 60);
@@ -263,9 +266,54 @@
             if (elem) elem.style.display = data.isTyping ? "block" : "none";
         });
 
+        connection.on("SessionAccepted", function (data) {
+            console.log("Astrologer SessionAccepted:", data);
+            document.getElementById("astroConnectionStatus").innerText = "Live";
+            document.getElementById("astroConnectionStatus").className = "badge bg-success";
+            startAstroTimer();
+            startAstroHeartbeat();
+            if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                setTimeout(() => initAstroWebRTC(), 800);
+            }
+        });
+
         connection.on("SessionEnded", function (data) {
-            alert(`Consultation ended. Total Duration: ${data.durationSeconds}s. Net Earnings: ₹${(data.astrologerEarnings || 0).toFixed(2)}`);
+            clearInterval(timerInterval);
+            stopAstroHeartbeat();
+            closeAstroWebRTC();
+            const mins = Math.floor((data.durationSeconds || 0) / 60);
+            const secs = (data.durationSeconds || 0) % 60;
+            alert(`Consultation ended. Total Duration: ${mins}m ${secs}s. Net Earnings: ₹${(data.astrologerEarnings || 0).toFixed(2)}`);
             window.location.href = "/Astrologer/Home";
+        });
+
+        connection.on("UserJoinedSession", function (data) {
+            console.log("Seeker joined/reconnected:", data.displayName);
+            if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                setTimeout(() => createAndSendAstroOffer(), 1200);
+            }
+        });
+
+        // WebRTC Signaling
+        connection.on("ReceiveMediaAnswer", async function (answer) {
+            console.log("Astrologer received answer");
+            if (astroPeerConnection) {
+                try {
+                    await astroPeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                } catch (err) {
+                    console.error("Error setting remote answer:", err);
+                }
+            }
+        });
+
+        connection.on("ReceiveIceCandidate", async function (candidate) {
+            if (astroPeerConnection && candidate) {
+                try {
+                    await astroPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn("ICE error:", e);
+                }
+            }
         });
 
         connection.start()
@@ -273,15 +321,43 @@
                 document.getElementById("astroConnectionStatus").innerText = "Live";
                 document.getElementById("astroConnectionStatus").className = "badge bg-success";
                 connection.invoke("JoinSessionGroup", sessionPublicId);
-                startAstroTimer();
+
+                if (sessionStatus === 'ACTIVE') {
+                    startAstroTimer();
+                    startAstroHeartbeat();
+                    if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                        setTimeout(() => initAstroWebRTC(), 1000);
+                    }
+                    const now = Math.floor(Date.now() / 1000);
+                    connection.invoke("BroadcastSessionAccepted", sessionPublicId, now).catch(() => {});
+                }
             })
             .catch(function (err) {
                 console.error("SignalR Error: ", err);
                 document.getElementById("astroConnectionStatus").innerText = "Offline Mode";
                 document.getElementById("astroConnectionStatus").className = "badge bg-danger";
-                startAstroTimer();
             });
 
+        // ===================== HEARTBEAT =====================
+        let astroHeartbeatInterval = null;
+        function startAstroHeartbeat() {
+            if (astroHeartbeatInterval) return;
+            astroHeartbeatInterval = setInterval(() => {
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    connection.invoke("Ping", sessionPublicId).catch(() => {});
+                }
+            }, 30000);
+        }
+        function stopAstroHeartbeat() {
+            if (astroHeartbeatInterval) { clearInterval(astroHeartbeatInterval); astroHeartbeatInterval = null; }
+        }
+
+        window.addEventListener("beforeunload", function () {
+            stopAstroHeartbeat();
+            closeAstroWebRTC();
+        });
+
+        // ===================== CHAT =====================
         function appendAstroMessage(sender, text, isMe) {
             const box = document.getElementById("astroChatMessages");
             const div = document.createElement("div");
@@ -314,68 +390,107 @@
             if (e.key === "Enter") sendAstroMessage();
         }
 
-        // =================== LiveKit Integration for Astrologer ===================
-        const livekitToken = '@ViewBag.LiveKitToken';
-        const livekitUrl = 'wss://cyhastro-pimmehdb.livekit.cloud';
-        const sessionType = '@Model.SessionType';
-        let livekitRoom = null;
+        // ===================== WebRTC (Astrologer = Caller) =====================
+        let astroPeerConnection = null;
+        let astroLocalStream = null;
+        const iceServers = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" }
+            ]
+        };
 
-        async function connectAstroLiveKit() {
-            if (!livekitToken || livekitToken === '' || sessionType === 'CHAT') return;
-
+        async function initAstroWebRTC() {
+            if (astroLocalStream) return;
             try {
-                livekitRoom = new LivekitClient.Room({
-                    adaptiveStream: true,
-                    dynacast: true,
-                });
+                const constraints = sessionType === 'VIDEO'
+                    ? { video: { width: 1280, height: 720 }, audio: true }
+                    : { video: false, audio: true };
 
-                livekitRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-                    if (track.kind === LivekitClient.Track.Kind.Video) {
-                        const videoEl = track.attach();
-                        videoEl.style.width = '100%';
-                        videoEl.style.height = '100%';
-                        videoEl.style.objectFit = 'cover';
-                        videoEl.style.borderRadius = '12px';
-                        const container = document.getElementById('videoContainer');
-                        const placeholder = document.getElementById('remoteParticipantCard');
-                        if (placeholder) placeholder.style.display = 'none';
-                        container.appendChild(videoEl);
-                    } else if (track.kind === LivekitClient.Track.Kind.Audio) {
-                        const audioEl = track.attach();
-                        document.body.appendChild(audioEl);
-                    }
-                });
+                astroLocalStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                livekitRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
-                    track.detach();
-                });
-
-                await livekitRoom.connect(livekitUrl, livekitToken);
-                console.log('Astrologer connected to LiveKit room:', livekitRoom.name);
-
-                // Publish Astrologer tracks
+                // Show local video PiP
                 if (sessionType === 'VIDEO') {
-                    await livekitRoom.localParticipant.enableCameraAndMicrophone();
-                    const localVideoTrack = livekitRoom.localParticipant.getTrackPublication(LivekitClient.Track.Source.Camera)?.track;
-                    if (localVideoTrack) {
-                        const localVideoEl = localVideoTrack.attach();
-                        localVideoEl.style.width = '100%';
-                        localVideoEl.style.height = '100%';
-                        localVideoEl.style.objectFit = 'cover';
-                        const localContainer = document.getElementById('localParticipantCard');
+                    const localContainer = document.getElementById('localParticipantCard');
+                    if (localContainer) {
+                        const localVid = document.createElement('video');
+                        localVid.srcObject = astroLocalStream;
+                        localVid.autoplay = true;
+                        localVid.muted = true;
+                        localVid.playsInline = true;
+                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
                         localContainer.innerHTML = '';
-                        localContainer.appendChild(localVideoEl);
+                        localContainer.appendChild(localVid);
                     }
-                } else if (sessionType === 'AUDIO') {
-                    await livekitRoom.localParticipant.setMicrophoneEnabled(true);
                 }
 
+                astroPeerConnection = new RTCPeerConnection(iceServers);
+                astroLocalStream.getTracks().forEach(track => astroPeerConnection.addTrack(track, astroLocalStream));
+
+                astroPeerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        connection.invoke("SignalIceCandidate", sessionPublicId, event.candidate);
+                    }
+                };
+
+                astroPeerConnection.ontrack = (event) => {
+                    console.log("Astrologer received track:", event.track.kind);
+                    const placeholder = document.getElementById('remoteParticipantCard');
+                    if (placeholder) placeholder.style.display = 'none';
+                    const container = document.getElementById('videoContainer');
+
+                    if (event.track.kind === 'video') {
+                        let remoteVid = document.getElementById('remoteVideoEl');
+                        if (!remoteVid) {
+                            remoteVid = document.createElement('video');
+                            remoteVid.id = 'remoteVideoEl';
+                            remoteVid.autoplay = true;
+                            remoteVid.playsInline = true;
+                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0;';
+                            container.appendChild(remoteVid);
+                        }
+                        remoteVid.srcObject = event.streams[0];
+                    } else if (event.track.kind === 'audio') {
+                        let remoteAudio = document.getElementById('remoteAudioEl');
+                        if (!remoteAudio) {
+                            remoteAudio = document.createElement('audio');
+                            remoteAudio.id = 'remoteAudioEl';
+                            remoteAudio.autoplay = true;
+                            document.body.appendChild(remoteAudio);
+                        }
+                        remoteAudio.srcObject = event.streams[0];
+                    }
+                };
+
+                await createAndSendAstroOffer();
+
             } catch (err) {
-                console.error('LiveKit connection error:', err);
+                console.error("Astrologer Camera/Mic access error:", err);
+                alert("Could not access camera or microphone. Please allow permissions in your browser.");
             }
         }
 
-        connectAstroLiveKit();
+        async function createAndSendAstroOffer() {
+            if (!astroPeerConnection) return;
+            try {
+                const offer = await astroPeerConnection.createOffer();
+                await astroPeerConnection.setLocalDescription(offer);
+                connection.invoke("SignalMediaOffer", sessionPublicId, offer);
+            } catch (e) {
+                console.error("Error creating astrologer offer:", e);
+            }
+        }
+
+        function closeAstroWebRTC() {
+            if (astroLocalStream) {
+                astroLocalStream.getTracks().forEach(t => t.stop());
+                astroLocalStream = null;
+            }
+            if (astroPeerConnection) {
+                astroPeerConnection.close();
+                astroPeerConnection = null;
+            }
+        }
 
         let isAudioMuted = false;
         async function toggleAudio() {
@@ -384,8 +499,8 @@
             btn.innerHTML = isAudioMuted
                 ? '<i class="fa-solid fa-microphone-slash text-danger fs-5"></i>'
                 : '<i class="fa-solid fa-microphone fs-5"></i>';
-            if (livekitRoom) {
-                await livekitRoom.localParticipant.setMicrophoneEnabled(!isAudioMuted);
+            if (astroLocalStream) {
+                astroLocalStream.getAudioTracks().forEach(t => t.enabled = !isAudioMuted);
             }
         }
 
@@ -396,8 +511,8 @@
             btn.innerHTML = isVideoOff
                 ? '<i class="fa-solid fa-video-slash text-danger fs-5"></i>'
                 : '<i class="fa-solid fa-video fs-5"></i>';
-            if (livekitRoom) {
-                await livekitRoom.localParticipant.setCameraEnabled(!isVideoOff);
+            if (astroLocalStream) {
+                astroLocalStream.getVideoTracks().forEach(t => t.enabled = !isVideoOff);
             }
         }
     </script>

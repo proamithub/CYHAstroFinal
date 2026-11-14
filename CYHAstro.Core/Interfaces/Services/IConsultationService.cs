@@ -18,4 +18,7 @@ public interface IConsultationService
     Task<Result<bool>> RejectConsultationAsync(long astrologerUserId, string sessionPublicId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetAstrologerSessionsAsync(long astrologerUserId, string? status = null, int limit = 50, CancellationToken ct = default);
     Task<Result<IReadOnlyList<ConsultationResponseDto>>> GetUserConsultationsAsync(long userId, int limit = 50, CancellationToken ct = default);
+    Task HeartbeatAsync(long userId, string sessionPublicId, CancellationToken ct = default);
+    Task UpdateDisconnectedAtAsync(long userId, DateTime disconnectedAt, CancellationToken ct = default);
+    Task<Result<bool>> AutoEndStaleSessionsAsync(CancellationToken ct = default);
 }

@@ -937,3 +937,20 @@ IF NOT EXISTS (SELECT 1 FROM dbo.ReportTemplates WHERE ReportType = 'FINANCE')
 IF NOT EXISTS (SELECT 1 FROM dbo.ReportTemplates WHERE ReportType = 'ANNUAL')
     INSERT INTO dbo.ReportTemplates (ReportType, TemplateName, Price) VALUES ('ANNUAL', 'Yearly Varshphal Transit Report', 399.00);
 GO
+
+-- ============================================================
+-- MIGRATION: Add Heartbeat + Disconnect tracking to ConsultationSessions
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ConsultationSessions') AND name = 'LastHeartbeatAt')
+BEGIN
+    ALTER TABLE dbo.ConsultationSessions ADD LastHeartbeatAt DATETIME2 NULL;
+    PRINT 'Added LastHeartbeatAt to ConsultationSessions';
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.ConsultationSessions') AND name = 'DisconnectedAt')
+BEGIN
+    ALTER TABLE dbo.ConsultationSessions ADD DisconnectedAt DATETIME2 NULL;
+    PRINT 'Added DisconnectedAt to ConsultationSessions';
+END
+GO

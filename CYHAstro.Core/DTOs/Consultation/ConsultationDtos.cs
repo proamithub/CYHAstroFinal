@@ -42,7 +42,7 @@ public sealed record ConsultationCompletedDto
     public decimal UserRemainingBalance { get; init; }
     public decimal AstrologerEarnings { get; init; }
     public decimal PlatformCommission { get; init; }
-    public string Status { get; init; } = "COMPLETED";
+    public string Status { get; init; } = "ENDED";
 }
 
 public sealed record ConsultationMessageDto

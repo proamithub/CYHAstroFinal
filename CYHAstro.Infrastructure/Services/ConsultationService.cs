@@ -208,7 +208,7 @@ public sealed class ConsultationService : IConsultationService
             return Result<ConsultationCompletedDto>.Failure(Result.ErrorCodes.NotFound, "Session not found.");
         }
 
-        if ((string)session.Status == "COMPLETED" || (bool)session.IsBilled)
+        if ((string)session.Status == "ENDED" || (bool)session.IsBilled)
         {
             var bal = await _walletService.GetBalanceAsync((long)session.UserId, ct);
             return Result<ConsultationCompletedDto>.Success(new ConsultationCompletedDto
@@ -217,7 +217,7 @@ public sealed class ConsultationService : IConsultationService
                 DurationSeconds = (int)session.DurationSeconds,
                 TotalCharge = (decimal)session.TotalCharge,
                 UserRemainingBalance = bal.IsSuccess ? bal.Value!.TotalBalance : 0m,
-                Status = "COMPLETED"
+                Status = "ENDED"
             });
         }
 
@@ -303,7 +303,7 @@ public sealed class ConsultationService : IConsultationService
 
         const string sqlFinish = @"
             UPDATE dbo.ConsultationSessions
-            SET Status = 'COMPLETED',
+            SET Status = 'ENDED',
                 EndedAt = GETUTCDATE(),
                 DurationSeconds = @DurationSeconds,
                 TotalCharge = @TotalCharge,
@@ -322,7 +322,7 @@ public sealed class ConsultationService : IConsultationService
             Id = (long)session.Id,
             DurationSeconds = durationSeconds,
             TotalCharge = totalCharge,
-            EndReason = endReason ?? "COMPLETED",
+            EndReason = endReason ?? "ENDED",
             AstrologerId = (long)session.AstrologerId
         });
 
@@ -336,7 +336,7 @@ public sealed class ConsultationService : IConsultationService
             UserRemainingBalance = finalBal.IsSuccess ? finalBal.Value!.TotalBalance : 0m,
             AstrologerEarnings = astroEarnings,
             PlatformCommission = commission,
-            Status = "COMPLETED"
+            Status = "ENDED"
         });
     }
 
@@ -763,5 +763,85 @@ public sealed class ConsultationService : IConsultationService
         }).ToList();
 
         return Result<IReadOnlyList<ConsultationResponseDto>>.Success(list);
+    }
+
+    public async Task HeartbeatAsync(long userId, string sessionPublicId, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            await conn.ExecuteAsync(
+                @"UPDATE dbo.ConsultationSessions 
+                  SET LastHeartbeatAt = GETUTCDATE(), DisconnectedAt = NULL
+                  WHERE PublicId = @PublicId AND UserId = @UserId AND Status = 'ACTIVE'",
+                new { PublicId = sessionPublicId, UserId = userId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Heartbeat failed for session {SessionPublicId}", sessionPublicId);
+        }
+    }
+
+    public async Task UpdateDisconnectedAtAsync(long userId, DateTime disconnectedAt, CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            await conn.ExecuteAsync(
+                @"UPDATE dbo.ConsultationSessions 
+                  SET DisconnectedAt = @DisconnectedAt
+                  WHERE UserId = @UserId AND Status = 'ACTIVE' AND DisconnectedAt IS NULL",
+                new { UserId = userId, DisconnectedAt = disconnectedAt });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "UpdateDisconnectedAt failed for user {UserId}", userId);
+        }
+    }
+
+    public async Task<Result<bool>> AutoEndStaleSessionsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            using var conn = await _db.CreateOpenConnectionAsync(ct);
+            // Find sessions ACTIVE but LastHeartbeatAt > 90 seconds ago (or DisconnectedAt > 90 seconds ago)
+            var staleSessions = await conn.QueryAsync<dynamic>(
+                @"SELECT s.PublicId, s.UserId, s.AstrologerId, s.ConnectedAt, s.AcceptedAt, s.RatePerMinute,
+                         a.CommissionRatePct, a.UserId AS AstroUserId
+                  FROM dbo.ConsultationSessions s
+                  JOIN dbo.Astrologers a ON a.Id = s.AstrologerId
+                  WHERE s.Status = 'ACTIVE' AND s.IsDeleted = 0
+                    AND (
+                        (s.LastHeartbeatAt IS NOT NULL AND DATEDIFF(SECOND, s.LastHeartbeatAt, GETUTCDATE()) > 90)
+                        OR
+                        (s.DisconnectedAt IS NOT NULL AND DATEDIFF(SECOND, s.DisconnectedAt, GETUTCDATE()) > 60)
+                        OR
+                        (s.LastHeartbeatAt IS NULL AND s.ConnectedAt IS NOT NULL AND DATEDIFF(SECOND, s.ConnectedAt, GETUTCDATE()) > 300)
+                    )");
+
+            int count = 0;
+            foreach (var stale in staleSessions)
+            {
+                try
+                {
+                    // Use the existing EndConsultationAsync logic
+                    // ActorUserId = 0 means system auto-end
+                    await EndConsultationAsync(0, (string)stale.PublicId, "TIMEOUT", ct);
+                    count++;
+                    _logger.LogInformation("Auto-ended stale session {PublicId}", (string)stale.PublicId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to auto-end stale session {PublicId}", (string)stale.PublicId);
+                }
+            }
+
+            return Result<bool>.Success(count > 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AutoEndStaleSessionsAsync failed");
+            return Result<bool>.Failure("AUTO_END_FAILED", ex.Message);
+        }
     }
 }

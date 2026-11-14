@@ -55,6 +55,18 @@
             <div class="col-lg-7">
                 <div class="card cosmic-card p-3 h-100 d-flex flex-column" style="min-height: 520px;">
                     <div class="flex-grow-1 position-relative rounded-4 overflow-hidden bg-black d-flex align-items-center justify-content-center border border-secondary border-opacity-50" id="videoContainer">
+                        <!-- Waiting Overlay — hidden once astrologer accepts -->
+                        <div id="waitingOverlay" class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-90" style="z-index: 10; border-radius: 12px; @(Model.Status == "ACTIVE" ? "display: none;" : "")">
+                            <div class="spinner-grow text-warning mb-3" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
+                            <h5 class="text-white fw-bold mb-1">Waiting for Astrologer...</h5>
+                            <p class="text-secondary small mb-2 text-center px-3">
+                                Please wait while <strong class="text-warning">@Model.AstrologerName</strong> accepts your consultation request.
+                            </p>
+                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-3 py-2">
+                                <i class="fa-solid fa-phone-volume fa-shake me-2"></i>Ringing Astrologer...
+                            </span>
+                        </div>
+
                         <!-- Remote Astrologer Placeholder / Feed -->
                         <div class="text-center p-4" id="remoteParticipantCard">
                             <img src="@(string.IsNullOrEmpty(Model.AstrologerPhoto) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=250" : Model.AstrologerPhoto)"
@@ -210,24 +222,26 @@
 @section Scripts {
     <!-- SignalR Client Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
-    <!-- LiveKit Client SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 
     <script>
         const sessionPublicId = "@Model.PublicId";
+        const sessionType = "@Model.SessionType";     // CHAT, AUDIO, VIDEO
+        const sessionStatus = "@Model.Status";         // REQUESTED, ACTIVE, etc.
         const ratePerMinute = @Model.RatePerMinute;
         let initialBalance = @walletBalance;
         let elapsedSeconds = @Model.DurationSeconds;
         let timerInterval = null;
+        let timerStarted = false;
 
-        // Timer and Spending calculations
+        // ===================== TIMER =====================
         function startTimer() {
+            if (timerStarted) return;
+            timerStarted = true;
             timerInterval = setInterval(() => {
                 elapsedSeconds++;
                 const mins = Math.floor(elapsedSeconds / 60);
                 const secs = elapsedSeconds % 60;
                 const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-                
                 document.getElementById("sessionTimer").innerText = timeStr;
                 document.getElementById("modalElapsed").innerText = timeStr;
 
@@ -247,7 +261,7 @@
             }, 1000);
         }
 
-        // Initialize SignalR Connection
+        // ===================== SIGNALR =====================
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/hubs/consultation")
             .withAutomaticReconnect()
@@ -262,60 +276,131 @@
             if (elem) elem.style.display = data.isTyping ? "block" : "none";
         });
 
-        let selectedRating = 5;
-        function setRating(val) {
-            selectedRating = val;
-            const stars = document.querySelectorAll(".star-btn");
-            stars.forEach(s => {
-                const sVal = parseInt(s.getAttribute("data-value"));
-                s.style.color = sVal <= val ? "#e5a93b" : "#6c757d";
-            });
-        }
+        // ===== ASTROLOGER ACCEPTED — Start Timer + WebRTC =====
+        connection.on("SessionAccepted", function (data) {
+            console.log("SessionAccepted received:", data);
+            const waitingOverlay = document.getElementById("waitingOverlay");
+            if (waitingOverlay) waitingOverlay.style.display = "none";
 
-        async function submitReview() {
-            const comment = document.getElementById("reviewComment").value.trim();
-            try {
-                const resp = await fetch("/Consultation/SubmitReview", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        sessionPublicId: sessionPublicId,
-                        rating: selectedRating,
-                        reviewText: comment
-                    })
-                });
-                const resData = await resp.json();
-                if (resp.ok) {
-                    alert("Thank you for your valuable feedback!");
-                }
-            } catch (e) {
-                console.error("Review submission error:", e);
+            const statusBadge = document.getElementById("connectionStatus");
+            if (statusBadge) {
+                statusBadge.innerText = "Live";
+                statusBadge.className = "badge bg-success";
             }
-            window.location.href = "/Astrologers";
-        }
+            startTimer();
+            startHeartbeat();
+            if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                initWebRTC(true); // callee mode: will answer astrologer's offer
+            }
+        });
 
+        connection.on("SessionRejected", function (data) {
+            alert("Astrologer is currently unavailable. Consultation request was not accepted.");
+            window.location.href = "/Astrologers";
+        });
+
+        // ===== SESSION ENDED =====
         connection.on("SessionEnded", function (data) {
             clearInterval(timerInterval);
-            document.getElementById("reviewSummaryText").innerText = 
-                `Duration: ${Math.floor(data.durationSeconds / 60)}m ${data.durationSeconds % 60}s | Billed: ₹${data.totalCharge.toFixed(2)}`;
+            stopHeartbeat();
+            closeWebRTC();
+            const mins = Math.floor((data.durationSeconds || 0) / 60);
+            const secs = (data.durationSeconds || 0) % 60;
+            document.getElementById("reviewSummaryText").innerText =
+                `Duration: ${mins}m ${secs}s | Billed: ₹${(data.totalCharge || 0).toFixed(2)}`;
             const revModal = new bootstrap.Modal(document.getElementById("reviewModal"));
             revModal.show();
         });
 
+        connection.on("UserJoinedSession", function (data) {
+            console.log("Participant joined:", data.displayName);
+            if (timerStarted && (sessionType === 'VIDEO' || sessionType === 'AUDIO')) {
+                setTimeout(() => createAndSendOffer(), 1500);
+            }
+        });
+
+        // WebRTC signaling receivers
+        connection.on("ReceiveMediaOffer", async function (offer) {
+            console.log("Received media offer");
+            if (!peerConnection) await initWebRTC(true);
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                connection.invoke("SignalMediaAnswer", sessionPublicId, answer);
+            } catch (err) {
+                console.error("Error answering offer:", err);
+            }
+        });
+
+        connection.on("ReceiveMediaAnswer", async function (answer) {
+            console.log("Received media answer");
+            if (peerConnection) {
+                try {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                } catch (err) {
+                    console.error("Error setting remote answer:", err);
+                }
+            }
+        });
+
+        connection.on("ReceiveIceCandidate", async function (candidate) {
+            if (peerConnection && candidate) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn("ICE candidate error:", e);
+                }
+            }
+        });
+
         connection.start()
             .then(function () {
-                document.getElementById("connectionStatus").innerText = "Connected";
-                document.getElementById("connectionStatus").className = "badge bg-success";
                 connection.invoke("JoinSessionGroup", sessionPublicId);
-                startTimer();
+
+                if (sessionStatus === 'ACTIVE') {
+                    const waitingOverlay = document.getElementById("waitingOverlay");
+                    if (waitingOverlay) waitingOverlay.style.display = "none";
+                    document.getElementById("connectionStatus").innerText = "Live";
+                    document.getElementById("connectionStatus").className = "badge bg-success";
+                    startTimer();
+                    startHeartbeat();
+                    if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                        setTimeout(() => initWebRTC(true), 1500);
+                    }
+                } else {
+                    document.getElementById("connectionStatus").innerText = "Waiting...";
+                    document.getElementById("connectionStatus").className = "badge bg-warning text-dark";
+                }
             })
             .catch(function (err) {
                 console.error("SignalR Connection Error: ", err);
                 document.getElementById("connectionStatus").innerText = "Offline Mode";
                 document.getElementById("connectionStatus").className = "badge bg-danger";
-                startTimer();
             });
 
+        // ===================== HEARTBEAT =====================
+        let heartbeatInterval = null;
+        function startHeartbeat() {
+            if (heartbeatInterval) return;
+            heartbeatInterval = setInterval(() => {
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    connection.invoke("Ping", sessionPublicId).catch(() => {});
+                }
+            }, 30000);
+        }
+        function stopHeartbeat() {
+            if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+        }
+
+        // ===================== BEFORE UNLOAD =====================
+        window.addEventListener("beforeunload", function () {
+            stopHeartbeat();
+            closeWebRTC();
+            navigator.sendBeacon('/Consultation/Disconnect?sessionId=' + encodeURIComponent(sessionPublicId));
+        });
+
+        // ===================== CHAT =====================
         function appendMessage(sender, text, isMe) {
             const box = document.getElementById("chatMessages");
             const div = document.createElement("div");
@@ -348,74 +433,140 @@
             if (e.key === "Enter") sendMessage();
         }
 
-        // =================== LiveKit Integration ===================
-        const livekitToken = '@ViewBag.LiveKitToken';
-        const livekitUrl = 'wss://cyhastro-pimmehdb.livekit.cloud';
-        const sessionType = '@Model.SessionType';
-        let livekitRoom = null;
+        // ===================== REVIEW =====================
+        let selectedRating = 5;
+        function setRating(val) {
+            selectedRating = val;
+            const stars = document.querySelectorAll(".star-btn");
+            stars.forEach(s => {
+                const sVal = parseInt(s.getAttribute("data-value"));
+                s.style.color = sVal <= val ? "#e5a93b" : "#6c757d";
+            });
+        }
 
-        async function connectLiveKit() {
-            if (!livekitToken || livekitToken === '' || sessionType === 'CHAT') return;
-
+        async function submitReview() {
+            const comment = document.getElementById("reviewComment").value.trim();
             try {
-                livekitRoom = new LivekitClient.Room({
-                    adaptiveStream: true,
-                    dynacast: true,
+                const resp = await fetch("/Consultation/SubmitReview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sessionPublicId: sessionPublicId,
+                        rating: selectedRating,
+                        reviewText: comment
+                    })
                 });
+                if (resp.ok) {
+                    alert("Thank you for your valuable feedback!");
+                }
+            } catch (e) {
+                console.error("Review submission error:", e);
+            }
+            window.location.href = "/Astrologers";
+        }
 
-                livekitRoom.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-                    if (track.kind === LivekitClient.Track.Kind.Video) {
-                        const videoEl = track.attach();
-                        videoEl.style.width = '100%';
-                        videoEl.style.height = '100%';
-                        videoEl.style.objectFit = 'cover';
-                        videoEl.style.borderRadius = '12px';
-                        const container = document.getElementById('videoContainer');
-                        const placeholder = document.getElementById('remoteParticipantCard');
-                        if (placeholder) placeholder.style.display = 'none';
-                        container.appendChild(videoEl);
-                    } else if (track.kind === LivekitClient.Track.Kind.Audio) {
-                        const audioEl = track.attach();
-                        document.body.appendChild(audioEl);
-                    }
-                });
+        // ===================== WebRTC =====================
+        let peerConnection = null;
+        let localStream = null;
+        const iceServers = {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" }
+            ]
+        };
 
-                livekitRoom.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
-                    track.detach();
-                });
+        async function initWebRTC(isCallee) {
+            if (localStream) return;
+            try {
+                const constraints = sessionType === 'VIDEO'
+                    ? { video: { width: 1280, height: 720, facingMode: 'user' }, audio: true }
+                    : { video: false, audio: true };
 
-                livekitRoom.on(LivekitClient.RoomEvent.Disconnected, () => {
-                    console.log('LiveKit disconnected');
-                });
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                await livekitRoom.connect(livekitUrl, livekitToken);
-                console.log('LiveKit connected to room:', livekitRoom.name);
-
-                // Publish local tracks
+                // Show local video PiP
                 if (sessionType === 'VIDEO') {
-                    await livekitRoom.localParticipant.enableCameraAndMicrophone();
-                    const localVideoTrack = livekitRoom.localParticipant.getTrackPublication(LivekitClient.Track.Source.Camera)?.track;
-                    if (localVideoTrack) {
-                        const localVideoEl = localVideoTrack.attach();
-                        localVideoEl.style.width = '100%';
-                        localVideoEl.style.height = '100%';
-                        localVideoEl.style.objectFit = 'cover';
-                        const localContainer = document.getElementById('localParticipantCard');
+                    const localContainer = document.getElementById('localParticipantCard');
+                    if (localContainer) {
+                        const localVid = document.createElement('video');
+                        localVid.srcObject = localStream;
+                        localVid.autoplay = true;
+                        localVid.muted = true;
+                        localVid.playsInline = true;
+                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
                         localContainer.innerHTML = '';
-                        localContainer.appendChild(localVideoEl);
+                        localContainer.appendChild(localVid);
                     }
-                } else if (sessionType === 'AUDIO') {
-                    await livekitRoom.localParticipant.setMicrophoneEnabled(true);
                 }
 
+                peerConnection = new RTCPeerConnection(iceServers);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        connection.invoke("SignalIceCandidate", sessionPublicId, event.candidate);
+                    }
+                };
+
+                peerConnection.ontrack = (event) => {
+                    console.log("Track received:", event.track.kind);
+                    const placeholder = document.getElementById('remoteParticipantCard');
+                    if (placeholder) placeholder.style.display = 'none';
+                    const container = document.getElementById('videoContainer');
+
+                    if (event.track.kind === 'video') {
+                        let remoteVid = document.getElementById('remoteVideoEl');
+                        if (!remoteVid) {
+                            remoteVid = document.createElement('video');
+                            remoteVid.id = 'remoteVideoEl';
+                            remoteVid.autoplay = true;
+                            remoteVid.playsInline = true;
+                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0;';
+                            container.appendChild(remoteVid);
+                        }
+                        remoteVid.srcObject = event.streams[0];
+                    } else if (event.track.kind === 'audio') {
+                        let remoteAudio = document.getElementById('remoteAudioEl');
+                        if (!remoteAudio) {
+                            remoteAudio = document.createElement('audio');
+                            remoteAudio.id = 'remoteAudioEl';
+                            remoteAudio.autoplay = true;
+                            document.body.appendChild(remoteAudio);
+                        }
+                        remoteAudio.srcObject = event.streams[0];
+                    }
+                };
+
+                if (!isCallee) {
+                    await createAndSendOffer();
+                }
             } catch (err) {
-                console.error('LiveKit connection error:', err);
+                console.error("Camera/Mic access error:", err);
+                alert("Could not access camera or microphone. Please allow permissions in your browser.");
             }
         }
 
-        // Connect LiveKit when page loads (for VIDEO and AUDIO sessions)
-        connectLiveKit();
-        // =================== End LiveKit ===================
+        async function createAndSendOffer() {
+            if (!peerConnection) return;
+            try {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                connection.invoke("SignalMediaOffer", sessionPublicId, offer);
+            } catch (e) {
+                console.error("Error creating offer:", e);
+            }
+        }
+
+        function closeWebRTC() {
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+        }
 
         let isAudioMuted = false;
         async function toggleAudio() {
@@ -424,8 +575,8 @@
             btn.innerHTML = isAudioMuted
                 ? '<i class="fa-solid fa-microphone-slash text-danger fs-5"></i>'
                 : '<i class="fa-solid fa-microphone fs-5"></i>';
-            if (livekitRoom) {
-                await livekitRoom.localParticipant.setMicrophoneEnabled(!isAudioMuted);
+            if (localStream) {
+                localStream.getAudioTracks().forEach(t => t.enabled = !isAudioMuted);
             }
         }
 
@@ -436,8 +587,8 @@
             btn.innerHTML = isVideoOff
                 ? '<i class="fa-solid fa-video-slash text-danger fs-5"></i>'
                 : '<i class="fa-solid fa-video fs-5"></i>';
-            if (livekitRoom) {
-                await livekitRoom.localParticipant.setCameraEnabled(!isVideoOff);
+            if (localStream) {
+                localStream.getVideoTracks().forEach(t => t.enabled = !isVideoOff);
             }
         }
     </script>

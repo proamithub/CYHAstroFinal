@@ -21,7 +21,6 @@ public sealed class ConsultationHub : Hub
     public async Task JoinSessionGroup(string sessionPublicId)
     {
         if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
-
         await Groups.AddToGroupAsync(Context.ConnectionId, sessionPublicId);
 
         var userId = GetCurrentUserId();
@@ -40,7 +39,6 @@ public sealed class ConsultationHub : Hub
     public async Task LeaveSessionGroup(string sessionPublicId)
     {
         if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
-
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, sessionPublicId);
 
         var userId = GetCurrentUserId();
@@ -55,6 +53,18 @@ public sealed class ConsultationHub : Hub
     {
         if (string.IsNullOrWhiteSpace(astrologerPublicId)) return;
         await Groups.AddToGroupAsync(Context.ConnectionId, $"astro_queue_{astrologerPublicId}");
+    }
+
+    // Called by Astrologer controller after accepting — broadcasts to both sides to start timer + WebRTC
+    public async Task BroadcastSessionAccepted(string sessionPublicId, long connectedAtUnix)
+    {
+        if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
+        await Clients.Group(sessionPublicId).SendAsync("SessionAccepted", new
+        {
+            sessionPublicId,
+            connectedAtUnix,
+            message = "Astrologer has accepted the consultation. Session is now live!"
+        });
     }
 
     public async Task SendMessage(string sessionPublicId, string message)
@@ -90,6 +100,17 @@ public sealed class ConsultationHub : Hub
         });
     }
 
+    // Heartbeat ping — client sends every 30 seconds to signal it's alive
+    public async Task Ping(string sessionPublicId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
+        var userId = GetCurrentUserId();
+        if (userId <= 0) return;
+
+        await _consultationService.HeartbeatAsync(userId, sessionPublicId);
+    }
+
+    // WebRTC Signaling relay methods
     public async Task SignalMediaOffer(string sessionPublicId, object offer)
     {
         if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
@@ -117,13 +138,32 @@ public sealed class ConsultationHub : Hub
 
         if (endRes.IsSuccess)
         {
-            await Clients.Group(sessionPublicId).SendAsync("SessionEnded", endRes.Value);
+            await Clients.Group(sessionPublicId).SendAsync("SessionEnded", new
+            {
+                sessionPublicId,
+                durationSeconds = endRes.Value!.DurationSeconds,
+                totalCharge = endRes.Value.TotalCharge,
+                astrologerEarnings = endRes.Value.AstrologerEarnings,
+                endedBy = reason ?? "USER_END"
+            });
         }
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = GetCurrentUserId();
+        if (userId > 0)
+        {
+            _logger.LogInformation("User {UserId} disconnected from SignalR. Exception: {Msg}", userId, exception?.Message);
+            // Record disconnect time — StaleSessionWorker will auto-end if no reconnect within 90s
+            await _consultationService.UpdateDisconnectedAtAsync(userId, DateTime.UtcNow);
+        }
+        await base.OnDisconnectedAsync(exception);
     }
 
     private long GetCurrentUserId()
     {
-        var val = Context.User?.FindFirstValue("userId") ?? Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var val = Context.User?.FindFirstValue("userId") ?? Context.User?.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         return long.TryParse(val, out var id) ? id : 0;
     }
 }

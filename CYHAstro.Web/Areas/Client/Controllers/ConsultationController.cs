@@ -3,6 +3,7 @@ using CYHAstro.Core.DTOs.Consultation;
 using CYHAstro.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace CYHAstro.Web.Areas.Client.Controllers;
 
@@ -13,15 +14,18 @@ public sealed class ConsultationController : Controller
     private readonly IConsultationService _consultationService;
     private readonly IWalletService _walletService;
     private readonly ILogger<ConsultationController> _logger;
+    private readonly IHubContext<CYHAstro.Web.Hubs.ConsultationHub> _hubContext;
 
     public ConsultationController(
         IConsultationService consultationService,
         IWalletService walletService,
-        ILogger<ConsultationController> logger)
+        ILogger<ConsultationController> logger,
+        IHubContext<CYHAstro.Web.Hubs.ConsultationHub> hubContext)
     {
         _consultationService = consultationService;
         _walletService = walletService;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     [HttpGet("Consultation/Room/{id}")]
@@ -96,6 +100,14 @@ public sealed class ConsultationController : Controller
         var res = await _consultationService.EndConsultationAsync(userId, targetId, "USER_END", ct);
         if (res.IsSuccess)
         {
+            await _hubContext.Clients.Group(targetId).SendAsync("SessionEnded", new {
+                sessionPublicId = targetId,
+                durationSeconds = res.Value!.DurationSeconds,
+                totalCharge = res.Value.TotalCharge,
+                astrologerEarnings = 0,
+                endedBy = "USER"
+            });
+
             if (Request.Headers["Accept"].ToString().Contains("application/json"))
             {
                 return Ok(new
@@ -133,6 +145,19 @@ public sealed class ConsultationController : Controller
         }
 
         return BadRequest(new { success = false, error = res.Error });
+    }
+
+    [HttpPost("Consultation/Disconnect")]
+    [HttpGet("Consultation/Disconnect")]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> Disconnect([FromQuery] string? sessionId, CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        if (userId > 0)
+        {
+            await _consultationService.UpdateDisconnectedAtAsync(userId, DateTime.UtcNow, ct);
+        }
+        return Ok(new { status = "recorded" });
     }
 
     private long GetCurrentUserId()
