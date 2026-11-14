@@ -111,6 +111,12 @@ public sealed class ConsultationHub : Hub
     }
 
     // WebRTC Signaling relay methods
+    public async Task RequestMediaOffer(string sessionPublicId)
+    {
+        if (string.IsNullOrWhiteSpace(sessionPublicId)) return;
+        await Clients.OthersInGroup(sessionPublicId).SendAsync("ReceiveMediaOfferRequest");
+    }
+
     public async Task SignalMediaOffer(string sessionPublicId, object offer)
     {
         if (string.IsNullOrWhiteSpace(sessionPublicId)) return;

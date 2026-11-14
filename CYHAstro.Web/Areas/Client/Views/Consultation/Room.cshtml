@@ -68,7 +68,7 @@
                         </div>
 
                         <!-- Remote Astrologer Placeholder / Feed -->
-                        <div class="text-center p-4" id="remoteParticipantCard">
+                        <div class="text-center p-4" id="remoteParticipantCard" style="z-index: 2;">
                             <img src="@(string.IsNullOrEmpty(Model.AstrologerPhoto) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=250" : Model.AstrologerPhoto)"
                                  alt="@Model.AstrologerName" class="rounded-circle border border-warning shadow-lg mb-3" style="width: 120px; height: 120px; object-fit: cover;" />
                             <h5 class="text-white fw-bold mb-1">@Model.AstrologerName</h5>
@@ -79,7 +79,7 @@
 
                         <!-- Local Participant Floating Pip -->
                         <div class="position-absolute bottom-0 end-0 m-3 rounded-3 overflow-hidden border border-warning shadow"
-                             style="width: 150px; height: 100px; background-color: #151a30;" id="localParticipantCard">
+                             style="width: 150px; height: 100px; background-color: #151a30; z-index: 20;" id="localParticipantCard">
                             <div class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary small">
                                 <i class="fa-solid fa-user me-1 text-warning"></i> You
                             </div>
@@ -315,19 +315,24 @@
         connection.on("UserJoinedSession", function (data) {
             console.log("Participant joined:", data.displayName);
             if (timerStarted && (sessionType === 'VIDEO' || sessionType === 'AUDIO')) {
-                setTimeout(() => createAndSendOffer(), 1500);
+                connection.invoke("RequestMediaOffer", sessionPublicId).catch(() => {});
             }
         });
 
         // WebRTC signaling receivers
         connection.on("ReceiveMediaOffer", async function (offer) {
-            console.log("Received media offer");
-            if (!peerConnection) await initWebRTC(true);
+            console.log("Seeker received media offer");
+            if (!peerConnection) await initWebRTC();
+            if (!peerConnection) return;
             try {
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                await drainIceCandidates();
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                connection.invoke("SignalMediaAnswer", sessionPublicId, answer);
+                connection.invoke("SignalMediaAnswer", sessionPublicId, {
+                    type: answer.type,
+                    sdp: answer.sdp
+                });
             } catch (err) {
                 console.error("Error answering offer:", err);
             }
@@ -338,6 +343,7 @@
             if (peerConnection) {
                 try {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                    await drainIceCandidates();
                 } catch (err) {
                     console.error("Error setting remote answer:", err);
                 }
@@ -345,13 +351,8 @@
         });
 
         connection.on("ReceiveIceCandidate", async function (candidate) {
-            if (peerConnection && candidate) {
-                try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (e) {
-                    console.warn("ICE candidate error:", e);
-                }
-            }
+            if (!candidate) return;
+            await addIceCandidateSafely(candidate);
         });
 
         connection.start()
@@ -468,34 +469,87 @@
         // ===================== WebRTC =====================
         let peerConnection = null;
         let localStream = null;
+        let isInitializingWebRTC = false;
+        let remoteIceQueue = [];
+
         const iceServers = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" }
             ]
         };
 
-        async function initWebRTC(isCallee) {
-            if (localStream) return;
+        async function getClientMediaStream(isVideo) {
+            if (!isVideo) {
+                return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            }
             try {
-                const constraints = sessionType === 'VIDEO'
-                    ? { video: { width: 1280, height: 720, facingMode: 'user' }, audio: true }
-                    : { video: false, audio: true };
+                return await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: {
+                        width: { ideal: 1280, max: 1920 },
+                        height: { ideal: 720, max: 1080 },
+                        facingMode: 'user'
+                    }
+                });
+            } catch (err1) {
+                console.warn("Retrying client media with basic constraints:", err1);
+                try {
+                    return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                } catch (err2) {
+                    console.error("Failed to acquire client media:", err2);
+                    throw err2;
+                }
+            }
+        }
 
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        async function addIceCandidateSafely(candidate) {
+            if (!candidate || (!candidate.candidate && candidate.candidate !== '')) return;
+            if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn("Client addIceCandidate error:", e);
+                }
+            } else {
+                remoteIceQueue.push(candidate);
+            }
+        }
+
+        async function drainIceCandidates() {
+            if (!peerConnection) return;
+            while (remoteIceQueue.length > 0) {
+                const cand = remoteIceQueue.shift();
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                    console.warn("Client drain candidate error:", e);
+                }
+            }
+        }
+
+        async function initWebRTC() {
+            if (localStream || isInitializingWebRTC) return;
+            isInitializingWebRTC = true;
+
+            try {
+                const isVideo = sessionType === 'VIDEO';
+                localStream = await getClientMediaStream(isVideo);
 
                 // Show local video PiP
-                if (sessionType === 'VIDEO') {
+                if (isVideo) {
                     const localContainer = document.getElementById('localParticipantCard');
                     if (localContainer) {
+                        localContainer.innerHTML = '';
                         const localVid = document.createElement('video');
                         localVid.srcObject = localStream;
                         localVid.autoplay = true;
                         localVid.muted = true;
                         localVid.playsInline = true;
-                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
-                        localContainer.innerHTML = '';
+                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
                         localContainer.appendChild(localVid);
+                        localVid.play().catch(() => {});
                     }
                 }
 
@@ -504,14 +558,21 @@
 
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        connection.invoke("SignalIceCandidate", sessionPublicId, event.candidate);
+                        connection.invoke("SignalIceCandidate", sessionPublicId, {
+                            candidate: event.candidate.candidate,
+                            sdpMid: event.candidate.sdpMid,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex
+                        });
                     }
                 };
 
                 peerConnection.ontrack = (event) => {
-                    console.log("Track received:", event.track.kind);
+                    console.log("Client received astrologer track:", event.track.kind);
                     const placeholder = document.getElementById('remoteParticipantCard');
                     if (placeholder) placeholder.style.display = 'none';
+                    const waitingOverlay = document.getElementById('waitingOverlay');
+                    if (waitingOverlay) waitingOverlay.style.display = 'none';
+
                     const container = document.getElementById('videoContainer');
 
                     if (event.track.kind === 'video') {
@@ -521,10 +582,17 @@
                             remoteVid.id = 'remoteVideoEl';
                             remoteVid.autoplay = true;
                             remoteVid.playsInline = true;
-                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0;';
+                            remoteVid.muted = true; // muted to prevent browser autoplay block
+                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0; z-index: 1;';
                             container.appendChild(remoteVid);
                         }
-                        remoteVid.srcObject = event.streams[0];
+                        if (event.streams && event.streams[0]) {
+                            remoteVid.srcObject = event.streams[0];
+                        } else {
+                            if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
+                            remoteVid.srcObject.addTrack(event.track);
+                        }
+                        remoteVid.play().catch(e => console.warn("Client video play notice:", e));
                     } else if (event.track.kind === 'audio') {
                         let remoteAudio = document.getElementById('remoteAudioEl');
                         if (!remoteAudio) {
@@ -533,27 +601,21 @@
                             remoteAudio.autoplay = true;
                             document.body.appendChild(remoteAudio);
                         }
-                        remoteAudio.srcObject = event.streams[0];
+                        if (event.streams && event.streams[0]) {
+                            remoteAudio.srcObject = event.streams[0];
+                        } else {
+                            if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
+                            remoteAudio.srcObject.addTrack(event.track);
+                        }
+                        remoteAudio.play().catch(e => console.warn("Client audio play notice:", e));
                     }
                 };
 
-                if (!isCallee) {
-                    await createAndSendOffer();
-                }
             } catch (err) {
                 console.error("Camera/Mic access error:", err);
                 alert("Could not access camera or microphone. Please allow permissions in your browser.");
-            }
-        }
-
-        async function createAndSendOffer() {
-            if (!peerConnection) return;
-            try {
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                connection.invoke("SignalMediaOffer", sessionPublicId, offer);
-            } catch (e) {
-                console.error("Error creating offer:", e);
+            } finally {
+                isInitializingWebRTC = false;
             }
         }
 
@@ -566,6 +628,8 @@
                 peerConnection.close();
                 peerConnection = null;
             }
+            remoteIceQueue = [];
+            isInitializingWebRTC = false;
         }
 
         let isAudioMuted = false;

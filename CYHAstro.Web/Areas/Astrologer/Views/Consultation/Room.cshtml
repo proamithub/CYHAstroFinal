@@ -61,7 +61,7 @@
                     <div class="position-relative rounded-4 overflow-hidden bg-black d-flex align-items-center justify-content-center border border-secondary border-opacity-50"
                          style="height: 420px;" id="videoContainer">
                         <!-- Remote Seeker Feed Placeholder -->
-                        <div class="text-center p-4" id="remoteParticipantCard">
+                        <div class="text-center p-4" id="remoteParticipantCard" style="z-index: 2;">
                             <div class="rounded-circle bg-secondary bg-opacity-25 border border-warning mx-auto mb-3 d-flex align-items-center justify-content-center"
                                  style="width: 100px; height: 100px;">
                                 <i class="fa-solid fa-user text-warning fs-1"></i>
@@ -74,7 +74,7 @@
 
                         <!-- Astrologer Local Pip -->
                         <div class="position-absolute bottom-0 end-0 m-3 rounded-3 overflow-hidden border border-warning shadow"
-                             style="width: 140px; height: 95px; background-color: #101526;" id="localParticipantCard">
+                             style="width: 140px; height: 95px; background-color: #101526; z-index: 20;" id="localParticipantCard">
                             <div class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary small">
                                 <i class="fa-solid fa-video me-1 text-warning"></i> You
                             </div>
@@ -294,12 +294,20 @@
             }
         });
 
+        connection.on("ReceiveMediaOfferRequest", async function () {
+            console.log("Seeker requested media offer, creating offer...");
+            if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
+                await createAndSendAstroOffer();
+            }
+        });
+
         // WebRTC Signaling
         connection.on("ReceiveMediaAnswer", async function (answer) {
             console.log("Astrologer received answer");
             if (astroPeerConnection) {
                 try {
                     await astroPeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                    await drainAstroIceCandidates();
                 } catch (err) {
                     console.error("Error setting remote answer:", err);
                 }
@@ -307,13 +315,8 @@
         });
 
         connection.on("ReceiveIceCandidate", async function (candidate) {
-            if (astroPeerConnection && candidate) {
-                try {
-                    await astroPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (e) {
-                    console.warn("ICE error:", e);
-                }
-            }
+            if (!candidate) return;
+            await addAstroIceCandidateSafely(candidate);
         });
 
         connection.start()
@@ -393,34 +396,87 @@
         // ===================== WebRTC (Astrologer = Caller) =====================
         let astroPeerConnection = null;
         let astroLocalStream = null;
+        let isInitializingAstroWebRTC = false;
+        let astroRemoteIceQueue = [];
+
         const iceServers = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" }
             ]
         };
 
-        async function initAstroWebRTC() {
-            if (astroLocalStream) return;
+        async function getAstroMediaStream(isVideo) {
+            if (!isVideo) {
+                return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            }
             try {
-                const constraints = sessionType === 'VIDEO'
-                    ? { video: { width: 1280, height: 720 }, audio: true }
-                    : { video: false, audio: true };
+                return await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: {
+                        width: { ideal: 1280, max: 1920 },
+                        height: { ideal: 720, max: 1080 },
+                        facingMode: 'user'
+                    }
+                });
+            } catch (err1) {
+                console.warn("Retrying astrologer media with basic constraints:", err1);
+                try {
+                    return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                } catch (err2) {
+                    console.error("Failed to acquire astrologer media:", err2);
+                    throw err2;
+                }
+            }
+        }
 
-                astroLocalStream = await navigator.mediaDevices.getUserMedia(constraints);
+        async function addAstroIceCandidateSafely(candidate) {
+            if (!candidate || (!candidate.candidate && candidate.candidate !== '')) return;
+            if (astroPeerConnection && astroPeerConnection.remoteDescription && astroPeerConnection.remoteDescription.type) {
+                try {
+                    await astroPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn("Astro addIceCandidate error:", e);
+                }
+            } else {
+                astroRemoteIceQueue.push(candidate);
+            }
+        }
+
+        async function drainAstroIceCandidates() {
+            if (!astroPeerConnection) return;
+            while (astroRemoteIceQueue.length > 0) {
+                const cand = astroRemoteIceQueue.shift();
+                try {
+                    await astroPeerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                    console.warn("Astro drain candidate error:", e);
+                }
+            }
+        }
+
+        async function initAstroWebRTC() {
+            if (astroLocalStream || isInitializingAstroWebRTC) return;
+            isInitializingAstroWebRTC = true;
+
+            try {
+                const isVideo = sessionType === 'VIDEO';
+                astroLocalStream = await getAstroMediaStream(isVideo);
 
                 // Show local video PiP
-                if (sessionType === 'VIDEO') {
+                if (isVideo) {
                     const localContainer = document.getElementById('localParticipantCard');
                     if (localContainer) {
+                        localContainer.innerHTML = '';
                         const localVid = document.createElement('video');
                         localVid.srcObject = astroLocalStream;
                         localVid.autoplay = true;
                         localVid.muted = true;
                         localVid.playsInline = true;
-                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
-                        localContainer.innerHTML = '';
+                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
                         localContainer.appendChild(localVid);
+                        localVid.play().catch(() => {});
                     }
                 }
 
@@ -429,7 +485,11 @@
 
                 astroPeerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        connection.invoke("SignalIceCandidate", sessionPublicId, event.candidate);
+                        connection.invoke("SignalIceCandidate", sessionPublicId, {
+                            candidate: event.candidate.candidate,
+                            sdpMid: event.candidate.sdpMid,
+                            sdpMLineIndex: event.candidate.sdpMLineIndex
+                        });
                     }
                 };
 
@@ -446,10 +506,17 @@
                             remoteVid.id = 'remoteVideoEl';
                             remoteVid.autoplay = true;
                             remoteVid.playsInline = true;
-                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0;';
+                            remoteVid.muted = true; // muted to prevent browser autoplay block
+                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0; z-index: 1;';
                             container.appendChild(remoteVid);
                         }
-                        remoteVid.srcObject = event.streams[0];
+                        if (event.streams && event.streams[0]) {
+                            remoteVid.srcObject = event.streams[0];
+                        } else {
+                            if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
+                            remoteVid.srcObject.addTrack(event.track);
+                        }
+                        remoteVid.play().catch(e => console.warn("Video play notice:", e));
                     } else if (event.track.kind === 'audio') {
                         let remoteAudio = document.getElementById('remoteAudioEl');
                         if (!remoteAudio) {
@@ -458,7 +525,13 @@
                             remoteAudio.autoplay = true;
                             document.body.appendChild(remoteAudio);
                         }
-                        remoteAudio.srcObject = event.streams[0];
+                        if (event.streams && event.streams[0]) {
+                            remoteAudio.srcObject = event.streams[0];
+                        } else {
+                            if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
+                            remoteAudio.srcObject.addTrack(event.track);
+                        }
+                        remoteAudio.play().catch(e => console.warn("Audio play notice:", e));
                     }
                 };
 
@@ -467,15 +540,26 @@
             } catch (err) {
                 console.error("Astrologer Camera/Mic access error:", err);
                 alert("Could not access camera or microphone. Please allow permissions in your browser.");
+            } finally {
+                isInitializingAstroWebRTC = false;
             }
         }
 
         async function createAndSendAstroOffer() {
+            if (!astroPeerConnection) {
+                await initAstroWebRTC();
+            }
             if (!astroPeerConnection) return;
             try {
-                const offer = await astroPeerConnection.createOffer();
+                const offer = await astroPeerConnection.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: sessionType === 'VIDEO'
+                });
                 await astroPeerConnection.setLocalDescription(offer);
-                connection.invoke("SignalMediaOffer", sessionPublicId, offer);
+                connection.invoke("SignalMediaOffer", sessionPublicId, {
+                    type: offer.type,
+                    sdp: offer.sdp
+                });
             } catch (e) {
                 console.error("Error creating astrologer offer:", e);
             }
@@ -490,6 +574,8 @@
                 astroPeerConnection.close();
                 astroPeerConnection = null;
             }
+            astroRemoteIceQueue = [];
+            isInitializingAstroWebRTC = false;
         }
 
         let isAudioMuted = false;
