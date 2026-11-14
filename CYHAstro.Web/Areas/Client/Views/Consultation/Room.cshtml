@@ -604,6 +604,29 @@
                             if (placeholder) { placeholder.style.display = 'none'; placeholder.classList.add('d-none'); }
                             const waitingOverlay = document.getElementById('waitingOverlay');
                             if (waitingOverlay) { waitingOverlay.style.display = 'none'; waitingOverlay.classList.add('d-none'); }
+                            applyAdaptiveBitrate(peerConnection);
+                        }
+                    };
+
+                    peerConnection.oniceconnectionstatechange = () => {
+                        console.log("Client ICE connectionState:", peerConnection.iceConnectionState);
+                        const statusBadge = document.getElementById("connectionStatus");
+                        if (peerConnection.iceConnectionState === 'disconnected') {
+                            if (statusBadge) {
+                                statusBadge.innerText = "Network Slow / Reconnecting...";
+                                statusBadge.className = "badge bg-warning text-dark";
+                            }
+                            // Ask Astrologer for ICE restart if network dipped
+                            setTimeout(() => {
+                                if (peerConnection && peerConnection.iceConnectionState === 'disconnected') {
+                                    connection.invoke("RequestMediaOffer", sessionPublicId).catch(() => {});
+                                }
+                            }, 3000);
+                        } else if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+                            if (statusBadge) {
+                                statusBadge.innerText = "Live";
+                                statusBadge.className = "badge bg-success";
+                            }
                         }
                     };
 
@@ -673,6 +696,29 @@
             })();
 
             return initWebRTCPromise;
+        }
+
+        function applyAdaptiveBitrate(pc) {
+            if (!pc) return;
+            try {
+                pc.getSenders().forEach(sender => {
+                    if (sender.track && sender.track.kind === 'video') {
+                        const params = sender.getParameters();
+                        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+                        params.degradationPreference = 'balanced';
+                        params.encodings[0].maxBitrate = 800000; // max 800kbps (HD)
+                        params.encodings[0].minBitrate = 80000;  // floor 80kbps (auto downscale without freeze on slow net)
+                        sender.setParameters(params).catch(() => {});
+                    } else if (sender.track && sender.track.kind === 'audio') {
+                        const params = sender.getParameters();
+                        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+                        params.encodings[0].maxBitrate = 36000; // 36kbps Opus voice priority
+                        sender.setParameters(params).catch(() => {});
+                    }
+                });
+            } catch (e) {
+                console.warn("Client adaptive bitrate notice:", e);
+            }
         }
 
         function closeWebRTC() {
