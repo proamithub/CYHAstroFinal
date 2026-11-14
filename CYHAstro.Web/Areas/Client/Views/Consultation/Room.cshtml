@@ -88,7 +88,7 @@
                     </div>
 
                     <!-- Media Controls Bar -->
-                    <div class="d-flex justify-content-center gap-3 mt-3">
+                    <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
                         <button class="btn btn-outline-light rounded-circle p-3" id="micToggleBtn" title="Mute/Unmute Mic" onclick="toggleAudio()">
                             <i class="fa-solid fa-microphone fs-5"></i>
                         </button>
@@ -97,6 +97,48 @@
                             <button class="btn btn-outline-light rounded-circle p-3" id="camToggleBtn" title="Camera On/Off" onclick="toggleVideo()">
                                 <i class="fa-solid fa-video fs-5"></i>
                             </button>
+
+                            <!-- Manual Video Quality & GCC Control -->
+                            <div class="dropdown d-inline-block">
+                                <button class="btn btn-outline-warning rounded-pill px-3 py-2 dropdown-toggle d-flex align-items-center gap-2" type="button" id="qualityDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Video Quality / GCC Control">
+                                    <i class="fa-solid fa-sliders text-warning"></i>
+                                    <span id="qualityLabel" class="small fw-bold">Quality: Auto</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark border-secondary shadow-lg py-2" aria-labelledby="qualityDropdownBtn" style="min-width: 220px;">
+                                    <li><h6 class="dropdown-header text-warning fw-bold small text-uppercase"><i class="fa-solid fa-gauge-high me-1"></i> Quality / GCC Mode</h6></li>
+                                    <li>
+                                        <button class="dropdown-item d-flex justify-content-between align-items-center active" type="button" onclick="setManualVideoQuality('auto')">
+                                            <span><i class="fa-solid fa-wand-magic-sparkles me-2 text-warning"></i>Auto (Adaptive)</span>
+                                            <span class="badge bg-secondary small">GCC</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item d-flex justify-content-between align-items-center" type="button" onclick="setManualVideoQuality('high')">
+                                            <span><i class="fa-solid fa-circle-check me-2 text-success"></i>High (720p HD)</span>
+                                            <span class="text-secondary small">1.2 Mbps</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item d-flex justify-content-between align-items-center" type="button" onclick="setManualVideoQuality('medium')">
+                                            <span><i class="fa-solid fa-gauge-simple me-2 text-info"></i>Medium (480p)</span>
+                                            <span class="text-secondary small">400 kbps</span>
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item d-flex justify-content-between align-items-center" type="button" onclick="setManualVideoQuality('low')">
+                                            <span><i class="fa-solid fa-feather me-2 text-warning"></i>Data Saver (240p)</span>
+                                            <span class="text-secondary small">140 kbps</span>
+                                        </button>
+                                    </li>
+                                    <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                                    <li>
+                                        <button class="dropdown-item d-flex justify-content-between align-items-center" type="button" onclick="setManualVideoQuality('audio-only')">
+                                            <span><i class="fa-solid fa-headphones me-2 text-info"></i>Audio Only</span>
+                                            <span class="text-secondary small">36 kbps</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
                         }
                     </div>
                 </div>
@@ -698,26 +740,112 @@
             return initWebRTCPromise;
         }
 
+        let currentQualityMode = 'auto';
+
         function applyAdaptiveBitrate(pc) {
             if (!pc) return;
-            try {
-                pc.getSenders().forEach(sender => {
-                    if (sender.track && sender.track.kind === 'video') {
-                        const params = sender.getParameters();
-                        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
-                        params.degradationPreference = 'balanced';
-                        params.encodings[0].maxBitrate = 800000; // max 800kbps (HD)
-                        params.encodings[0].minBitrate = 80000;  // floor 80kbps (auto downscale without freeze on slow net)
-                        sender.setParameters(params).catch(() => {});
-                    } else if (sender.track && sender.track.kind === 'audio') {
-                        const params = sender.getParameters();
-                        if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
-                        params.encodings[0].maxBitrate = 36000; // 36kbps Opus voice priority
-                        sender.setParameters(params).catch(() => {});
+            setManualVideoQuality(currentQualityMode, false);
+        }
+
+        async function setManualVideoQuality(mode, updateUi = true) {
+            currentQualityMode = mode;
+            const label = document.getElementById('qualityLabel');
+            const pc = peerConnection;
+            const stream = localStream;
+
+            if (updateUi) {
+                document.querySelectorAll('.dropdown-item').forEach(item => {
+                    const oc = item.getAttribute('onclick') || '';
+                    if (oc.includes("'" + mode + "'")) {
+                        item.classList.add('active');
+                    } else if (oc.includes('setManualVideoQuality')) {
+                        item.classList.remove('active');
                     }
                 });
-            } catch (e) {
-                console.warn("Client adaptive bitrate notice:", e);
+            }
+
+            if (mode === 'audio-only') {
+                if (label) label.innerText = "Audio Only";
+                if (stream) {
+                    stream.getVideoTracks().forEach(t => t.enabled = false);
+                }
+                const camBtn = document.getElementById('camToggleBtn');
+                if (camBtn) camBtn.innerHTML = '<i class="fa-solid fa-video-slash text-danger fs-5"></i>';
+                return;
+            }
+
+            if (stream) {
+                stream.getVideoTracks().forEach(t => t.enabled = true);
+            }
+            const camBtn = document.getElementById('camToggleBtn');
+            if (camBtn) camBtn.innerHTML = '<i class="fa-solid fa-video fs-5"></i>';
+
+            let maxBps = 800000;
+            let minBps = 80000;
+            let scaleResolutionDownBy = 1.0;
+            let maxFramerate = 30;
+            let degradationPref = 'balanced';
+
+            switch (mode) {
+                case 'high':
+                    if (label) label.innerText = "High (720p)";
+                    maxBps = 1200000; // 1.2 Mbps
+                    minBps = 500000;
+                    scaleResolutionDownBy = 1.0;
+                    maxFramerate = 30;
+                    degradationPref = 'maintain-resolution';
+                    break;
+                case 'medium':
+                    if (label) label.innerText = "Medium (480p)";
+                    maxBps = 400000; // 400 kbps
+                    minBps = 180000;
+                    scaleResolutionDownBy = 1.5; // 720p -> 480p
+                    maxFramerate = 24;
+                    degradationPref = 'balanced';
+                    break;
+                case 'low':
+                    if (label) label.innerText = "Low (240p)";
+                    maxBps = 140000; // 140 kbps
+                    minBps = 60000;
+                    scaleResolutionDownBy = 3.0; // 720p -> 240p
+                    maxFramerate = 15;
+                    degradationPref = 'maintain-framerate';
+                    break;
+                case 'auto':
+                default:
+                    if (label) label.innerText = "Quality: Auto";
+                    maxBps = 800000;
+                    minBps = 80000;
+                    scaleResolutionDownBy = 1.0;
+                    maxFramerate = 30;
+                    degradationPref = 'balanced';
+                    break;
+            }
+
+            if (pc) {
+                try {
+                    pc.getSenders().forEach(sender => {
+                        if (sender.track && sender.track.kind === 'video') {
+                            const params = sender.getParameters();
+                            if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+                            params.degradationPreference = degradationPref;
+                            params.encodings[0].maxBitrate = maxBps;
+                            params.encodings[0].minBitrate = minBps;
+                            params.encodings[0].scaleResolutionDownBy = scaleResolutionDownBy;
+                            params.encodings[0].maxFramerate = maxFramerate;
+                            sender.setParameters(params).then(() => {
+                                console.log(`Client video GCC set to ${mode}: maxBitrate=${maxBps}, scale=${scaleResolutionDownBy}`);
+                            }).catch(err => console.warn("Failed to set video params:", err));
+                        } else if (sender.track && sender.track.kind === 'audio') {
+                            const params = sender.getParameters();
+                            if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+                            params.encodings[0].maxBitrate = 36000;
+                            sender.setParameters(params).catch(() => {});
+                        }
+                    });
+                } catch (e) {
+                    console.warn("Client could not apply quality params:", e);
+                }
             }
         }
 
