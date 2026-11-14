@@ -74,9 +74,28 @@ public sealed class MatchmakingPdfGenerator : IMatchmakingPdfService
 
                                 gc.Item().PaddingTop(4).Text(t =>
                                 {
-                                    t.Span("Coordinates: ").FontColor("#94A3B8").FontSize(9.5f);
-                                    t.Span($"{request.MaleLat:F2}°N, {request.MaleLon:F2}°E").FontColor(Colors.White).FontSize(9.5f);
+                                    t.Span("Birth Place: ").FontColor("#94A3B8").FontSize(9.5f);
+                                    t.Span(!string.IsNullOrWhiteSpace(request.MalePlace) ? request.MalePlace : $"{request.MaleLat:F2}°N, {request.MaleLon:F2}°E").FontColor(Colors.White).FontSize(9.5f);
                                 });
+
+                                if (result.MaleChart != null)
+                                {
+                                    gc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Lagna / Rashi: ").FontColor("#94A3B8").FontSize(9.5f);
+                                        t.Span($"{result.MaleChart.AscendantSign} / {result.MaleChart.MoonSign}").FontColor("#FDE68A").Bold().FontSize(9.5f);
+                                    });
+                                    gc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Nakshatra: ").FontColor("#94A3B8").FontSize(9.5f);
+                                        t.Span($"{result.MaleChart.BirthNakshatra} (Pada {result.MaleChart.BirthPada})").FontColor(Colors.White).FontSize(9.5f);
+                                    });
+                                    gc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Manglik: ").FontColor("#94A3B8").FontSize(9.5f);
+                                        t.Span(result.MaleManglik ? "Manglik (Mars in H" + (result.MaleChart.Planets.FirstOrDefault(p => p.PlanetName == "Mars")?.House) + ")" : "Non-Manglik").FontColor(result.MaleManglik ? "#FCA5A5" : "#86EFAC").Bold().FontSize(9.5f);
+                                    });
+                                }
                             });
 
                             // Bride Card
@@ -102,9 +121,28 @@ public sealed class MatchmakingPdfGenerator : IMatchmakingPdfService
 
                                 bc.Item().PaddingTop(4).Text(t =>
                                 {
-                                    t.Span("Coordinates: ").FontColor("#F472B6").FontSize(9.5f);
-                                    t.Span($"{request.FemaleLat:F2}°N, {request.FemaleLon:F2}°E").FontColor(Colors.White).FontSize(9.5f);
+                                    t.Span("Birth Place: ").FontColor("#F472B6").FontSize(9.5f);
+                                    t.Span(!string.IsNullOrWhiteSpace(request.FemalePlace) ? request.FemalePlace : $"{request.FemaleLat:F2}°N, {request.FemaleLon:F2}°E").FontColor(Colors.White).FontSize(9.5f);
                                 });
+
+                                if (result.FemaleChart != null)
+                                {
+                                    bc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Lagna / Rashi: ").FontColor("#F472B6").FontSize(9.5f);
+                                        t.Span($"{result.FemaleChart.AscendantSign} / {result.FemaleChart.MoonSign}").FontColor("#FDE68A").Bold().FontSize(9.5f);
+                                    });
+                                    bc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Nakshatra: ").FontColor("#F472B6").FontSize(9.5f);
+                                        t.Span($"{result.FemaleChart.BirthNakshatra} (Pada {result.FemaleChart.BirthPada})").FontColor(Colors.White).FontSize(9.5f);
+                                    });
+                                    bc.Item().PaddingTop(4).Text(t =>
+                                    {
+                                        t.Span("Manglik: ").FontColor("#F472B6").FontSize(9.5f);
+                                        t.Span(result.FemaleManglik ? "Manglik (Mars in H" + (result.FemaleChart.Planets.FirstOrDefault(p => p.PlanetName == "Mars")?.House) + ")" : "Non-Manglik").FontColor(result.FemaleManglik ? "#FCA5A5" : "#86EFAC").Bold().FontSize(9.5f);
+                                    });
+                                }
                             });
                         });
 
@@ -160,6 +198,18 @@ public sealed class MatchmakingPdfGenerator : IMatchmakingPdfService
                                             .FontSize(9).Bold().FontColor(result.HasGanaDosha ? "#D97706" : "#059669");
                                     });
                             });
+
+                            // Manglik Compatibility Row
+                            if (!string.IsNullOrWhiteSpace(result.ManglikConclusion))
+                            {
+                                sc.Item().PaddingTop(8).Background(result.MaleManglik != result.FemaleManglik ? "#FEF2F2" : "#F0FDF4")
+                                    .Border(1).BorderColor(result.MaleManglik != result.FemaleManglik ? "#F87171" : "#4ADE80")
+                                    .Padding(8).AlignCenter().Text(t =>
+                                    {
+                                        t.Span("Manglik Compatibility: ").Bold().FontSize(9f).FontColor(result.MaleManglik != result.FemaleManglik ? "#991B1B" : "#166534");
+                                        t.Span(result.ManglikConclusion).FontSize(9f).FontColor(result.MaleManglik != result.FemaleManglik ? "#B91C1C" : "#15803D");
+                                    });
+                            }
                         });
 
                         // Ashtakoot Guna Breakdown Table

@@ -42,7 +42,9 @@
 
                             <div class="mb-3">
                                 <label class="form-label small text-secondary">Birth Place</label>
-                                <input type="text" class="form-control form-control-cosmic" placeholder="e.g. New Delhi, India" value="New Delhi, India" required />
+                                <input asp-for="MalePlace" class="form-control form-control-cosmic" placeholder="e.g. New Delhi, India" required />
+                                <input type="hidden" asp-for="MaleLat" value="@(Model.MaleLat != 0 ? Model.MaleLat : 28.6139m)" />
+                                <input type="hidden" asp-for="MaleLon" value="@(Model.MaleLon != 0 ? Model.MaleLon : 77.2090m)" />
                             </div>
                         </div>
 
@@ -71,7 +73,9 @@
 
                             <div class="mb-3">
                                 <label class="form-label small text-secondary">Birth Place</label>
-                                <input type="text" class="form-control form-control-cosmic" placeholder="e.g. Mumbai, India" value="Mumbai, India" required />
+                                <input asp-for="FemalePlace" class="form-control form-control-cosmic" placeholder="e.g. Mumbai, India" required />
+                                <input type="hidden" asp-for="FemaleLat" value="@(Model.FemaleLat != 0 ? Model.FemaleLat : 19.0760m)" />
+                                <input type="hidden" asp-for="FemaleLon" value="@(Model.FemaleLon != 0 ? Model.FemaleLon : 72.8777m)" />
                             </div>
                         </div>
 

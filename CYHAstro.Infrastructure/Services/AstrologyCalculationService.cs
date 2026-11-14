@@ -540,6 +540,61 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
     public async Task<Result<MatchmakingResultDto>> CalculateMatchmakingAsync(
         MatchmakingRequestDto request, CancellationToken ct = default)
     {
+        // 1. Generate Groom and Bride Kundli Charts (Lagna D1 & Navamsha D9)
+        var maleKundliReq = new KundliRequestDto
+        {
+            Name = request.MaleName,
+            Gender = "Male",
+            DateOfBirth = request.MaleDob,
+            TimeOfBirth = request.MaleTob,
+            BirthPlace = !string.IsNullOrWhiteSpace(request.MalePlace) ? request.MalePlace : "New Delhi, India",
+            Latitude = request.MaleLat != 0 ? request.MaleLat : 28.6139m,
+            Longitude = request.MaleLon != 0 ? request.MaleLon : 77.2090m,
+            IncludeAiInterpretation = false
+        };
+
+        var femaleKundliReq = new KundliRequestDto
+        {
+            Name = request.FemaleName,
+            Gender = "Female",
+            DateOfBirth = request.FemaleDob,
+            TimeOfBirth = request.FemaleTob,
+            BirthPlace = !string.IsNullOrWhiteSpace(request.FemalePlace) ? request.FemalePlace : "Mumbai, India",
+            Latitude = request.FemaleLat != 0 ? request.FemaleLat : 19.0760m,
+            Longitude = request.FemaleLon != 0 ? request.FemaleLon : 72.8777m,
+            IncludeAiInterpretation = false
+        };
+
+        var maleChartRes = await GenerateKundliAsync(maleKundliReq, ct);
+        var femaleChartRes = await GenerateKundliAsync(femaleKundliReq, ct);
+
+        var maleChart = maleChartRes.IsSuccess ? maleChartRes.Value : null;
+        var femaleChart = femaleChartRes.IsSuccess ? femaleChartRes.Value : null;
+
+        // Manglik Dosha Analysis
+        var maleMarsHouse = maleChart?.Planets.FirstOrDefault(p => p.PlanetName == "Mars")?.House ?? 0;
+        var femaleMarsHouse = femaleChart?.Planets.FirstOrDefault(p => p.PlanetName == "Mars")?.House ?? 0;
+        bool maleManglik = maleMarsHouse is 1 or 4 or 7 or 8 or 12;
+        bool femaleManglik = femaleMarsHouse is 1 or 4 or 7 or 8 or 12;
+
+        string manglikConclusion;
+        if (!maleManglik && !femaleManglik)
+        {
+            manglikConclusion = "Both Non-Manglik (पूर्णतः दोष रहित - Highly Auspicious)";
+        }
+        else if (maleManglik && femaleManglik)
+        {
+            manglikConclusion = "Dosha Samya Cancellation (दोष साम्य - Auspicious! Both are Manglik, canceling malefic effects)";
+        }
+        else if (maleManglik && !femaleManglik)
+        {
+            manglikConclusion = "Groom is Manglik, Bride is Non-Manglik (एकल मांगलिक दोष - Kumbh Vivah / Mars remedies recommended)";
+        }
+        else
+        {
+            manglikConclusion = "Bride is Manglik, Groom is Non-Manglik (एकल मांगलिक दोष - Mangal Shanti / Gauri Puja recommended)";
+        }
+
         // Deterministic Ashtakoot Guna Milan (36 Gunas)
         int maleSeed = (request.MaleDob.DayOfYear * 13) + (int)request.MaleTob.TotalMinutes;
         int femaleSeed = (request.FemaleDob.DayOfYear * 17) + (int)request.FemaleTob.TotalMinutes;
@@ -581,7 +636,7 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
         else if (totalScore >= 18) conclusion = "Auspicious & Harmonious Match (Madhyam)";
         else conclusion = "Needs Planetary Remedies (Sadharan)";
 
-        string aiPrompt = $"Synthesize Vedic Kundli Milan between groom {request.MaleName} and bride {request.FemaleName}. Ashtakoot Score: {totalScore:F1}/36. Nadi: {nadi}/8, Bhakoot: {bhakoot}/7, Gana: {gana}/6. Conclusion: {conclusion}. Provide a concise 2-paragraph astrological verdict regarding marital happiness and recommended Vedic remedies.";
+        string aiPrompt = $"Synthesize Vedic Kundli Milan between groom {request.MaleName} (Lagna: {maleChart?.AscendantSign ?? "Aries"}, Moon: {maleChart?.MoonSign ?? "Taurus"}) and bride {request.FemaleName} (Lagna: {femaleChart?.AscendantSign ?? "Gemini"}, Moon: {femaleChart?.MoonSign ?? "Cancer"}). Ashtakoot Score: {totalScore:F1}/36. Nadi: {nadi}/8, Bhakoot: {bhakoot}/7, Gana: {gana}/6. Manglik Status: {manglikConclusion}. Conclusion: {conclusion}. Provide a concise 2-paragraph astrological verdict regarding marital happiness, compatibility, and recommended Vedic remedies.";
 
         string? aiVerdict;
         try
@@ -594,12 +649,12 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
 
             aiVerdict = aiResult.IsSuccess
                 ? aiResult.Value
-                : $"{conclusion}. With an Ashtakoot score of {totalScore:F1}/36, the union indicates mutual understanding, shared family values, and supportive companionship.";
+                : $"{conclusion}. With an Ashtakoot score of {totalScore:F1}/36 and {manglikConclusion}, the union indicates auspicious companionship, shared values, and mutual devotion.";
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Gemini Matchmaking verdict fallback triggered");
-            aiVerdict = $"{conclusion}. With an Ashtakoot score of {totalScore:F1}/36, the union indicates mutual understanding, shared family values, and supportive companionship.";
+            aiVerdict = $"{conclusion}. With an Ashtakoot score of {totalScore:F1}/36 and {manglikConclusion}, the union indicates mutual understanding, shared family values, and supportive companionship.";
         }
 
         var result = new MatchmakingResultDto
@@ -610,7 +665,12 @@ public sealed class AstrologyCalculationService : IAstrologyCalculationService
             HasNadiDosha = nadi == 0,
             HasBhakootDosha = bhakoot == 0,
             HasGanaDosha = gana < 3,
-            AiVerdict = aiVerdict
+            AiVerdict = aiVerdict,
+            MaleChart = maleChart,
+            FemaleChart = femaleChart,
+            MaleManglik = maleManglik,
+            FemaleManglik = femaleManglik,
+            ManglikConclusion = manglikConclusion
         };
 
         return Result<MatchmakingResultDto>.Success(result);

@@ -118,14 +118,16 @@ public sealed record MatchmakingRequestDto
     public string MaleName { get; init; } = string.Empty;
     public DateTime MaleDob { get; init; }
     public TimeSpan MaleTob { get; init; }
-    public decimal MaleLat { get; init; }
-    public decimal MaleLon { get; init; }
+    public string MalePlace { get; init; } = "New Delhi, India";
+    public decimal MaleLat { get; init; } = 28.6139m;
+    public decimal MaleLon { get; init; } = 77.2090m;
 
     public string FemaleName { get; init; } = string.Empty;
     public DateTime FemaleDob { get; init; }
     public TimeSpan FemaleTob { get; init; }
-    public decimal FemaleLat { get; init; }
-    public decimal FemaleLon { get; init; }
+    public string FemalePlace { get; init; } = "Mumbai, India";
+    public decimal FemaleLat { get; init; } = 19.0760m;
+    public decimal FemaleLon { get; init; } = 72.8777m;
 }
 
 public sealed record GunaMilanItemDto
@@ -146,4 +148,11 @@ public sealed record MatchmakingResultDto
     public bool HasBhakootDosha { get; init; }
     public bool HasGanaDosha { get; init; }
     public string? AiVerdict { get; init; }
+
+    // Side-by-Side Charts & Manglik Compatibility
+    public KundliChartDto? MaleChart { get; init; }
+    public KundliChartDto? FemaleChart { get; init; }
+    public bool MaleManglik { get; init; }
+    public bool FemaleManglik { get; init; }
+    public string ManglikConclusion { get; init; } = string.Empty;
 }

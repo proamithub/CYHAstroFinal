@@ -4,53 +4,404 @@
     string groom = ViewBag.MaleName as string ?? "Groom";
     string bride = ViewBag.FemaleName as string ?? "Bride";
     var req = ViewBag.MatchmakingRequest as CYHAstro.Core.DTOs.Astrology.MatchmakingRequestDto;
+
+    // Helper abbreviation for planets on SVG
+    string GetShortPlanet(string name) => name switch
+    {
+        "Sun" => "Su",
+        "Moon" => "Mo",
+        "Mars" => "Ma",
+        "Mercury" => "Me",
+        "Jupiter" => "Ju",
+        "Venus" => "Ve",
+        "Saturn" => "Sa",
+        "Rahu" => "Ra",
+        "Ketu" => "Ke",
+        _ => name.Length > 2 ? name.Substring(0, 2) : name
+    };
+
+    // House coordinates on North Indian Diamond SVG (viewBox 0 0 500 500)
+    var houseCoords = new (int numX, int numY, int pX, int pY)[]
+    {
+        (0, 0, 0, 0), // 0 unused
+        (250, 165, 250, 100), // H1 Lagna
+        (140, 85, 130, 48),   // H2
+        (85, 140, 48, 130),   // H3
+        (165, 250, 100, 250), // H4
+        (85, 360, 48, 370),   // H5
+        (140, 415, 130, 455), // H6
+        (250, 335, 250, 400), // H7
+        (360, 415, 370, 455), // H8
+        (415, 360, 452, 370), // H9
+        (335, 250, 400, 250), // H10
+        (415, 140, 452, 130), // H11
+        (360, 85, 370, 48)    // H12
+    };
+
+    var maleMars = Model.MaleChart?.Planets.FirstOrDefault(p => p.PlanetName == "Mars");
+    var femaleMars = Model.FemaleChart?.Planets.FirstOrDefault(p => p.PlanetName == "Mars");
 }
 
 <div class="container py-4">
-    <div class="text-center mb-4">
-        <span class="text-danger small fw-bold text-uppercase">Vedic Kundli Milan</span>
-        <h2 class="fw-bold text-white brand-font mb-1">Compatibility for @groom & @bride</h2>
-        <span class="text-secondary small">Ashtakoot Guna Milan Analysis</span>
+    <!-- Header Banner -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-1 mb-2">
+                <i class="fa-solid fa-heart me-1"></i> Vedic Kundli Milan
+            </span>
+            <h2 class="fw-bold text-white brand-font mb-1">
+                Compatibility for <span class="text-warning">@groom</span> & <span class="text-danger">@bride</span>
+            </h2>
+            <span class="text-secondary small">Vedic Ashtakoot (36 Gunas) Matching & Side-by-Side Kundli Analysis</span>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="shareMatchOnWhatsApp()" class="btn btn-success fw-bold px-3 py-2 shadow-sm">
+                <i class="fa-brands fa-whatsapp me-1"></i> WhatsApp Share
+            </button>
+            @if (req != null)
+            {
+                <form asp-action="DownloadMatchmakingPdf" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="MaleName" value="@req.MaleName" />
+                    <input type="hidden" name="MaleDob" value="@req.MaleDob.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="MaleTob" value="@req.MaleTob" />
+                    <input type="hidden" name="MalePlace" value="@req.MalePlace" />
+                    <input type="hidden" name="MaleLat" value="@req.MaleLat" />
+                    <input type="hidden" name="MaleLon" value="@req.MaleLon" />
+                    <input type="hidden" name="FemaleName" value="@req.FemaleName" />
+                    <input type="hidden" name="FemaleDob" value="@req.FemaleDob.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="FemaleTob" value="@req.FemaleTob" />
+                    <input type="hidden" name="FemalePlace" value="@req.FemalePlace" />
+                    <input type="hidden" name="FemaleLat" value="@req.FemaleLat" />
+                    <input type="hidden" name="FemaleLon" value="@req.FemaleLon" />
+                    <button type="submit" class="btn btn-warning fw-bold px-3 py-2 shadow-sm">
+                        <i class="fa-solid fa-file-pdf me-1"></i> Download PDF
+                    </button>
+                </form>
+            }
+        </div>
     </div>
 
     <!-- Score & Conclusion Card -->
     <div class="row justify-content-center mb-4">
-        <div class="col-lg-8">
+        <div class="col-12">
             <div class="cosmic-card p-4 p-md-5 text-center border-warning border-opacity-40">
-                <span class="text-secondary small d-block mb-1">Total Compatibility Score</span>
+                <span class="text-secondary small d-block mb-1 text-uppercase letter-spacing-1">Total Ashtakoot Guna Match Score</span>
                 <h1 class="display-3 fw-extrabold text-warning brand-font mb-2">
-                    @Model.TotalScore.ToString("F1") <span class="fs-4 text-secondary">/ 36</span>
+                    @Model.TotalScore.ToString("F1") <span class="fs-4 text-secondary">/ 36 Gunas</span>
                 </h1>
 
                 <div class="d-inline-block px-4 py-2 rounded-pill @(Model.TotalScore >= 18 ? "bg-success bg-opacity-25 text-success border border-success" : "bg-danger bg-opacity-25 text-danger border border-danger") fw-bold mb-3">
                     <i class="fa-solid fa-certificate me-1"></i> @Model.Conclusion
                 </div>
 
-                <!-- Dosha Checks -->
-                <div class="d-flex justify-content-center flex-wrap gap-3 mt-2">
+                <!-- 4 Dosha Checks -->
+                <div class="d-flex justify-content-center flex-wrap gap-2 mt-2">
                     <span class="badge @(Model.HasNadiDosha ? "bg-danger" : "bg-dark border border-secondary text-light") px-3 py-2">
-                        Nadi Dosha: @(Model.HasNadiDosha ? "Present" : "No Dosha")
+                        <i class="fa-solid @(Model.HasNadiDosha ? "fa-circle-xmark text-white" : "fa-circle-check text-success") me-1"></i>
+                        Nadi Dosha (8 Pts): @(Model.HasNadiDosha ? "Present" : "No Dosha")
                     </span>
                     <span class="badge @(Model.HasBhakootDosha ? "bg-danger" : "bg-dark border border-secondary text-light") px-3 py-2">
-                        Bhakoot Dosha: @(Model.HasBhakootDosha ? "Present" : "No Dosha")
+                        <i class="fa-solid @(Model.HasBhakootDosha ? "fa-circle-xmark text-white" : "fa-circle-check text-success") me-1"></i>
+                        Bhakoot Dosha (7 Pts): @(Model.HasBhakootDosha ? "Present" : "No Dosha")
                     </span>
                     <span class="badge @(Model.HasGanaDosha ? "bg-warning text-dark" : "bg-dark border border-secondary text-light") px-3 py-2">
-                        Gana Compatibility: @(Model.HasGanaDosha ? "Needs Harmony" : "Auspicious")
+                        <i class="fa-solid @(Model.HasGanaDosha ? "fa-triangle-exclamation text-dark" : "fa-circle-check text-success") me-1"></i>
+                        Gana (6 Pts): @(Model.HasGanaDosha ? "Needs Harmony" : "Auspicious Match")
+                    </span>
+                    <span class="badge @(Model.MaleManglik != Model.FemaleManglik ? "bg-danger" : "bg-success bg-opacity-25 text-success border border-success") px-3 py-2">
+                        <i class="fa-solid @(Model.MaleManglik != Model.FemaleManglik ? "fa-fire text-white" : "fa-shield-halved text-success") me-1"></i>
+                        Manglik Match: @(Model.MaleManglik == Model.FemaleManglik ? "Balanced (Samya)" : "Single Manglik")
                     </span>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SIDE-BY-SIDE KUNDLI CHARTS -->
+    <div class="row g-4 mb-4">
+        <!-- Groom Kundli (Var) -->
+        <div class="col-lg-6">
+            <div class="cosmic-card p-4 h-100 border-info border-opacity-30">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-mars text-info fs-5"></i>
+                            <h5 class="fw-bold text-white brand-font mb-0">@groom's Kundli (वर)</h5>
+                        </div>
+                        @if (Model.MaleChart != null)
+                        {
+                            <span class="text-secondary small">
+                                Lagna: <strong class="text-info">@Model.MaleChart.AscendantSign</strong> |
+                                Rashi: <strong class="text-warning">@Model.MaleChart.MoonSign</strong> |
+                                Nakshatra: <strong class="text-light">@Model.MaleChart.BirthNakshatra</strong>
+                            </span>
+                        }
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" id="groomBtnD1" onclick="toggleGroomChart('D1')" class="btn btn-warning fw-bold">D1 लग्न</button>
+                        <button type="button" id="groomBtnD9" onclick="toggleGroomChart('D9')" class="btn btn-outline-secondary text-light">D9 नवांश</button>
+                    </div>
+                </div>
+
+                @if (Model.MaleChart != null)
+                {
+                    <div class="kundli-chart-wrapper my-2">
+                        <!-- Groom D1 Chart -->
+                        <div id="groomChartD1Container">
+                            <svg viewBox="0 0 500 500" class="kundli-svg">
+                                <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                @for (int h = 1; h <= 12; h++)
+                                {
+                                    var house = Model.MaleChart.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                    var coords = houseCoords[h];
+                                    if (house != null)
+                                    {
+                                        @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                        if (house.PlanetsInHouse.Any())
+                                        {
+                                            var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                            @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                        }
+                                    }
+                                }
+                            </svg>
+                            <div class="text-center mt-2 small text-warning fw-bold">
+                                <i class="fa-solid fa-certificate me-1"></i> Lagna Chart (D1) — Body, Soul & Personality
+                            </div>
+                        </div>
+
+                        <!-- Groom D9 Chart -->
+                        <div id="groomChartD9Container" class="d-none">
+                            <svg viewBox="0 0 500 500" class="kundli-svg">
+                                <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                @for (int h = 1; h <= 12; h++)
+                                {
+                                    var house = Model.MaleChart.NavamshaHouses.FirstOrDefault(x => x.HouseNumber == h) ?? Model.MaleChart.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                    var coords = houseCoords[h];
+                                    if (house != null)
+                                    {
+                                        @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                        if (house.PlanetsInHouse.Any())
+                                        {
+                                            var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                            @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                        }
+                                    }
+                                }
+                            </svg>
+                            <div class="text-center mt-2 small text-info fw-bold">
+                                <i class="fa-solid fa-gem me-1"></i> Navamsha Chart (D9) — Marriage & Destiny
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25 small">
+                        <span class="text-secondary">Mars (मंगल) in House @(maleMars?.House ?? 0):</span>
+                        <span class="badge @(Model.MaleManglik ? "bg-danger" : "bg-success")">
+                            @(Model.MaleManglik ? "Manglik (मांगलिक)" : "Non-Manglik (अमांगलिक)")
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Bride Kundli (Kanya) -->
+        <div class="col-lg-6">
+            <div class="cosmic-card p-4 h-100 border-danger border-opacity-30">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-venus text-danger fs-5"></i>
+                            <h5 class="fw-bold text-white brand-font mb-0">@bride's Kundli (कन्या)</h5>
+                        </div>
+                        @if (Model.FemaleChart != null)
+                        {
+                            <span class="text-secondary small">
+                                Lagna: <strong class="text-danger">@Model.FemaleChart.AscendantSign</strong> |
+                                Rashi: <strong class="text-warning">@Model.FemaleChart.MoonSign</strong> |
+                                Nakshatra: <strong class="text-light">@Model.FemaleChart.BirthNakshatra</strong>
+                            </span>
+                        }
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" id="brideBtnD1" onclick="toggleBrideChart('D1')" class="btn btn-danger fw-bold">D1 लग्न</button>
+                        <button type="button" id="brideBtnD9" onclick="toggleBrideChart('D9')" class="btn btn-outline-secondary text-light">D9 नवांश</button>
+                    </div>
+                </div>
+
+                @if (Model.FemaleChart != null)
+                {
+                    <div class="kundli-chart-wrapper my-2">
+                        <!-- Bride D1 Chart -->
+                        <div id="brideChartD1Container">
+                            <svg viewBox="0 0 500 500" class="kundli-svg">
+                                <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                @for (int h = 1; h <= 12; h++)
+                                {
+                                    var house = Model.FemaleChart.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                    var coords = houseCoords[h];
+                                    if (house != null)
+                                    {
+                                        @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                        if (house.PlanetsInHouse.Any())
+                                        {
+                                            var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                            @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                        }
+                                    }
+                                }
+                            </svg>
+                            <div class="text-center mt-2 small text-warning fw-bold">
+                                <i class="fa-solid fa-certificate me-1"></i> Lagna Chart (D1) — Body, Soul & Personality
+                            </div>
+                        </div>
+
+                        <!-- Bride D9 Chart -->
+                        <div id="brideChartD9Container" class="d-none">
+                            <svg viewBox="0 0 500 500" class="kundli-svg">
+                                <rect x="10" y="10" width="480" height="480" class="chart-frame" rx="10" />
+                                <polygon points="250,10 490,250 250,490 10,250" class="chart-line" fill="none" />
+                                <line x1="10" y1="10" x2="490" y2="490" class="chart-line" />
+                                <line x1="10" y1="490" x2="490" y2="10" class="chart-line" />
+
+                                @for (int h = 1; h <= 12; h++)
+                                {
+                                    var house = Model.FemaleChart.NavamshaHouses.FirstOrDefault(x => x.HouseNumber == h) ?? Model.FemaleChart.Houses.FirstOrDefault(x => x.HouseNumber == h);
+                                    var coords = houseCoords[h];
+                                    if (house != null)
+                                    {
+                                        @:<text x="@coords.numX" y="@coords.numY" class="house-num">@house.SignId</text>
+                                        if (house.PlanetsInHouse.Any())
+                                        {
+                                            var shortPlanets = string.Join(" ", house.PlanetsInHouse.Select(GetShortPlanet));
+                                            @:<text x="@coords.pX" y="@coords.pY" class="planet-pill">@shortPlanets</text>
+                                        }
+                                    }
+                                }
+                            </svg>
+                            <div class="text-center mt-2 small text-info fw-bold">
+                                <i class="fa-solid fa-gem me-1"></i> Navamsha Chart (D9) — Marriage & Destiny
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary border-opacity-25 small">
+                        <span class="text-secondary">Mars (मंगल) in House @(femaleMars?.House ?? 0):</span>
+                        <span class="badge @(Model.FemaleManglik ? "bg-danger" : "bg-success")">
+                            @(Model.FemaleManglik ? "Manglik (मांगलिक)" : "Non-Manglik (अमांगलिक)")
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Planetary Harmony & Manglik Deep-Dive Table -->
+    @if (Model.MaleChart != null && Model.FemaleChart != null)
+    {
+        <div class="row justify-content-center mb-4">
+            <div class="col-12">
+                <div class="cosmic-card p-4">
+                    <h5 class="fw-bold text-white brand-font mb-3">
+                        <i class="fa-solid fa-arrows-split-up-and-left text-warning me-2"></i>
+                        Planetary Compatibility & Manglik Analysis (ग्रह स्थिति एवं मांगलिक मिलान)
+                    </h5>
+
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0 small align-middle">
+                            <thead>
+                                <tr class="text-secondary border-secondary">
+                                    <th>Parameter</th>
+                                    <th>Groom (@groom)</th>
+                                    <th>Bride (@bride)</th>
+                                    <th>Vedic Compatibility Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold text-warning">Ascendant Sign (लग्न)</td>
+                                    <td><i class="fa-solid fa-mars text-info me-1"></i> @Model.MaleChart.AscendantSign</td>
+                                    <td><i class="fa-solid fa-venus text-danger me-1"></i> @Model.FemaleChart.AscendantSign</td>
+                                    <td><span class="badge bg-success bg-opacity-25 text-success border border-success">Harmonious</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-warning">Moon Sign (चन्द्र राशि)</td>
+                                    <td><strong class="text-light">@Model.MaleChart.MoonSign</strong></td>
+                                    <td><strong class="text-light">@Model.FemaleChart.MoonSign</strong></td>
+                                    <td>
+                                        <span class="badge @(Model.HasBhakootDosha ? "bg-danger" : "bg-success bg-opacity-25 text-success border border-success")">
+                                            @(Model.HasBhakootDosha ? "Bhakoot Caution" : "Rashi Maitri Auspicious")
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-warning">Birth Nakshatra (नक्षत्र)</td>
+                                    <td>@Model.MaleChart.BirthNakshatra (Pada @Model.MaleChart.BirthPada)</td>
+                                    <td>@Model.FemaleChart.BirthNakshatra (Pada @Model.FemaleChart.BirthPada)</td>
+                                    <td>
+                                        <span class="badge @(Model.HasNadiDosha ? "bg-danger" : "bg-success bg-opacity-25 text-success border border-success")">
+                                            @(Model.HasNadiDosha ? "Nadi Dosha Present" : "Nadi Balanced")
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-warning">Sun Sign (सूर्य राशि)</td>
+                                    <td>@Model.MaleChart.SunSign</td>
+                                    <td>@Model.FemaleChart.SunSign</td>
+                                    <td><span class="badge bg-info bg-opacity-25 text-info border border-info">Soul Connection</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold text-warning">Mars Position (मंगल भाव)</td>
+                                    <td>House @(maleMars?.House ?? 0) (@(Model.MaleManglik ? "Manglik" : "Non-Manglik"))</td>
+                                    <td>House @(femaleMars?.House ?? 0) (@(Model.FemaleManglik ? "Manglik" : "Non-Manglik"))</td>
+                                    <td>
+                                        <span class="badge @(Model.MaleManglik != Model.FemaleManglik ? "bg-danger" : "bg-success")">
+                                            @(Model.MaleManglik == Model.FemaleManglik ? "Dosha Samya (दोष साम्य)" : "Single Manglik")
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-3 p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-warning fs-5"></i>
+                            <div>
+                                <strong class="text-white small">Manglik Verdict:</strong>
+                                <span class="small @(Model.MaleManglik != Model.FemaleManglik ? "text-danger fw-bold" : "text-success fw-bold")">
+                                    @Model.ManglikConclusion
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Gemini AI Verdict -->
     @if (!string.IsNullOrWhiteSpace(Model.AiVerdict))
     {
         <div class="row justify-content-center mb-4">
-            <div class="col-lg-8">
+            <div class="col-12">
                 <div class="cosmic-card p-4 border-warning border-opacity-30">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <i class="fa-solid fa-wand-magic-sparkles text-warning fs-5"></i>
-                        <h6 class="fw-bold text-white brand-font mb-0">Gemini AI Astrological Verdict</h6>
+                        <h6 class="fw-bold text-white brand-font mb-0">Gemini AI Astrological Synthesis</h6>
                     </div>
                     <p class="text-light leading-relaxed small mb-0">
                         @Model.AiVerdict
@@ -62,7 +413,7 @@
 
     <!-- 8 Ashtakoot Gunas Breakdown Table -->
     <div class="row justify-content-center mb-4">
-        <div class="col-lg-8">
+        <div class="col-12">
             <div class="cosmic-card p-4">
                 <h5 class="fw-bold text-white brand-font mb-3">
                     <i class="fa-solid fa-list-check text-warning me-2"></i> Ashtakoot (8 Dimensions) Breakdown
@@ -103,6 +454,61 @@
         </div>
     </div>
 
+    <!-- Recommended Vedic Remedies for Marital Bliss -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-12">
+            <div class="cosmic-card p-4 border-warning border-opacity-30">
+                <h5 class="fw-bold text-white brand-font mb-3">
+                    <i class="fa-solid fa-om text-warning me-2"></i>
+                    Vedic Remedies for Marital Harmony (विवाह शांति एवं सामंजस्य हेतु उपाय)
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <h6 class="fw-bold text-warning mb-1">
+                                <i class="fa-solid fa-hands-praying me-1"></i> Gauri-Shankar Puja & Rudrabhishek
+                            </h6>
+                            <p class="text-secondary small mb-0">
+                                Performing joint Shiva-Parvati puja or chanting the Gauri Shankar mantra removes emotional friction and promotes lasting affection.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <h6 class="fw-bold text-success mb-1">
+                                <i class="fa-solid fa-circle-notch me-1"></i> Maha Mrityunjaya Japa
+                            </h6>
+                            <p class="text-secondary small mb-0">
+                                If Nadi Dosha is indicated, chanting the Maha Mrityunjaya mantra mitigates genetic/health afflictions and blesses the couple with long life.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <h6 class="fw-bold text-danger mb-1">
+                                <i class="fa-solid fa-fire-flame-curved me-1"></i> Mangal Shanti & Kumbh Vivah
+                            </h6>
+                            <p class="text-secondary small mb-0">
+                                In case of Single Manglik Dosha, performing Mangal Shanti at an auspicious temple or Kumbh Vivah before marriage completely pacifies Mars.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-30 h-100">
+                            <h6 class="fw-bold text-info mb-1">
+                                <i class="fa-solid fa-user-tie me-1"></i> Consult Verified CYHAstro Acharya
+                            </h6>
+                            <p class="text-secondary small mb-0">
+                                For personalized Muhurat and Vivah Sanskar consultations, speak directly with one of our experienced Vedic Acharyas on audio or video call.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CTA Actions -->
     <div class="text-center d-flex justify-content-center flex-wrap gap-2 mt-4">
         @if (req != null)
@@ -112,18 +518,23 @@
                 <input type="hidden" name="MaleName" value="@req.MaleName" />
                 <input type="hidden" name="MaleDob" value="@req.MaleDob.ToString("yyyy-MM-dd")" />
                 <input type="hidden" name="MaleTob" value="@req.MaleTob" />
+                <input type="hidden" name="MalePlace" value="@req.MalePlace" />
                 <input type="hidden" name="MaleLat" value="@req.MaleLat" />
                 <input type="hidden" name="MaleLon" value="@req.MaleLon" />
                 <input type="hidden" name="FemaleName" value="@req.FemaleName" />
                 <input type="hidden" name="FemaleDob" value="@req.FemaleDob.ToString("yyyy-MM-dd")" />
                 <input type="hidden" name="FemaleTob" value="@req.FemaleTob" />
+                <input type="hidden" name="FemalePlace" value="@req.FemalePlace" />
                 <input type="hidden" name="FemaleLat" value="@req.FemaleLat" />
                 <input type="hidden" name="FemaleLon" value="@req.FemaleLon" />
                 <button type="submit" class="btn btn-warning fw-bold px-4 shadow">
-                    <i class="fa-solid fa-file-pdf me-2"></i> Download PDF Report
+                    <i class="fa-solid fa-file-pdf me-2"></i> Download Full PDF Report
                 </button>
             </form>
         }
+        <button onclick="shareMatchOnWhatsApp()" class="btn btn-success fw-bold px-4 shadow">
+            <i class="fa-brands fa-whatsapp me-2"></i> Share on WhatsApp
+        </button>
         <a asp-action="Matchmaking" class="btn btn-outline-gold">
             <i class="fa-solid fa-rotate-left me-1"></i> Check Another Match
         </a>
@@ -132,3 +543,69 @@
         </a>
     </div>
 </div>
+
+@section Scripts {
+<script>
+    function toggleGroomChart(chartType) {
+        const d1 = document.getElementById('groomChartD1Container');
+        const d9 = document.getElementById('groomChartD9Container');
+        const btnD1 = document.getElementById('groomBtnD1');
+        const btnD9 = document.getElementById('groomBtnD9');
+        if (chartType === 'D1') {
+            d1.classList.remove('d-none');
+            d9.classList.add('d-none');
+            btnD1.classList.add('btn-warning');
+            btnD1.classList.remove('btn-outline-secondary');
+            btnD9.classList.add('btn-outline-secondary');
+            btnD9.classList.remove('btn-warning');
+        } else {
+            d1.classList.add('d-none');
+            d9.classList.remove('d-none');
+            btnD9.classList.add('btn-warning');
+            btnD9.classList.remove('btn-outline-secondary');
+            btnD1.classList.add('btn-outline-secondary');
+            btnD1.classList.remove('btn-warning');
+        }
+    }
+
+    function toggleBrideChart(chartType) {
+        const d1 = document.getElementById('brideChartD1Container');
+        const d9 = document.getElementById('brideChartD9Container');
+        const btnD1 = document.getElementById('brideBtnD1');
+        const btnD9 = document.getElementById('brideBtnD9');
+        if (chartType === 'D1') {
+            d1.classList.remove('d-none');
+            d9.classList.add('d-none');
+            btnD1.classList.add('btn-danger');
+            btnD1.classList.remove('btn-outline-secondary');
+            btnD9.classList.add('btn-outline-secondary');
+            btnD9.classList.remove('btn-danger');
+        } else {
+            d1.classList.add('d-none');
+            d9.classList.remove('d-none');
+            btnD9.classList.add('btn-danger');
+            btnD9.classList.remove('btn-outline-secondary');
+            btnD1.classList.add('btn-outline-secondary');
+            btnD1.classList.remove('btn-danger');
+        }
+    }
+
+    function shareMatchOnWhatsApp() {
+        const groomName = "@groom";
+        const brideName = "@bride";
+        const score = "@Model.TotalScore.ToString("F1")";
+        const conclusion = "@Model.Conclusion";
+        const url = window.location.href;
+
+        const text = encodeURIComponent(
+            "✨ *CYHAstro Vedic Kundli Milan Result* ✨\n\n" +
+            "🤵 Var: " + groomName + "\n" +
+            "👰 Kanya: " + brideName + "\n" +
+            "🌟 Compatibility Score: *" + score + " / 36 Gunas*\n" +
+            "📜 Verdict: " + conclusion + "\n\n" +
+            "View full side-by-side Kundli charts and Ashtakoot Milan report here:\n" + url
+        );
+        window.open("https://api.whatsapp.com/send?text=" + text, '_blank');
+    }
+</script>
+}

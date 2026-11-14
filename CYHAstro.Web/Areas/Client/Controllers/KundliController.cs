@@ -120,13 +120,17 @@ public sealed class KundliController : Controller
     {
         var model = new MatchmakingRequestDto
         {
+            MaleName = "Aarav Sharma",
             MaleDob = DateTime.Today.AddYears(-27),
             MaleTob = new TimeSpan(10, 30, 0),
+            MalePlace = "New Delhi, India",
             MaleLat = 28.6139m,
             MaleLon = 77.2090m,
 
+            FemaleName = "Ananya Patel",
             FemaleDob = DateTime.Today.AddYears(-25),
             FemaleTob = new TimeSpan(14, 15, 0),
+            FemalePlace = "Mumbai, India",
             FemaleLat = 19.0760m,
             FemaleLon = 72.8777m
         };
