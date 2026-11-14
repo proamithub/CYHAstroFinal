@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace CYHAstro.Web.Hubs;
 
-[Authorize(AuthenticationSchemes = "ClientCookie,AstrologerCookie")]
+[AllowAnonymous]
 public sealed class ConsultationHub : Hub
 {
     private readonly IConsultationService _consultationService;

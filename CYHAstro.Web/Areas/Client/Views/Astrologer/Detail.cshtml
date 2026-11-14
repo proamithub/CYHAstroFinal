@@ -28,6 +28,14 @@
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <h3 class="fw-bold text-white mb-0 brand-font">@Model.DisplayName</h3>
                             <span class="badge-verified"><i class="fa-solid fa-certificate me-1"></i> Verified</span>
+                            @if (Model.IsAvailable)
+                            {
+                                <span class="badge-online" data-astro-badge="@Model.PublicId" id="astroProfileBadge"><i class="fa-solid fa-circle me-1" style="font-size: 6px;"></i> Online</span>
+                            }
+                            else
+                            {
+                                <span class="badge-offline" data-astro-badge="@Model.PublicId" id="astroProfileBadge"><i class="fa-solid fa-circle me-1 text-secondary" style="font-size: 6px;"></i> Offline</span>
+                            }
                         </div>
                         <div class="d-flex align-items-center gap-2 mb-2">
                             <div class="d-flex align-items-center text-warning">
@@ -174,15 +182,28 @@
                                 <input type="hidden" name="sessionType" id="formSessionType" value="" />
                             </form>
 
-                            <button class="btn btn-gold w-100 py-3 fw-bold mb-2" onclick="startSession('@Model.PublicId', 'CHAT')">
-                                <i class="fa-solid fa-comment-dots me-2"></i> Start Chat Session
-                            </button>
-                            <button class="btn btn-outline-gold w-100 py-2 small mb-2" onclick="startSession('@Model.PublicId', 'AUDIO')">
-                                <i class="fa-solid fa-phone me-2"></i> Start Audio Call
-                            </button>
-                            <button class="btn btn-outline-gold w-100 py-2 small" onclick="startSession('@Model.PublicId', 'VIDEO')">
-                                <i class="fa-solid fa-video me-2"></i> Start Video Call
-                            </button>
+                            <div id="bookingActionsContainer" class="@(Model.IsAvailable ? "" : "d-none")">
+                                <button class="btn btn-gold w-100 py-3 fw-bold mb-2" onclick="startSession('@Model.PublicId', 'CHAT')">
+                                    <i class="fa-solid fa-comment-dots me-2"></i> Start Chat Session
+                                </button>
+                                <button class="btn btn-outline-gold w-100 py-2 small mb-2" onclick="startSession('@Model.PublicId', 'AUDIO')">
+                                    <i class="fa-solid fa-phone me-2"></i> Start Audio Call
+                                </button>
+                                <button class="btn btn-outline-gold w-100 py-2 small" onclick="startSession('@Model.PublicId', 'VIDEO')">
+                                    <i class="fa-solid fa-video me-2"></i> Start Video Call
+                                </button>
+                            </div>
+
+                            <div id="offlineNoticeContainer" class="@(Model.IsAvailable ? "d-none" : "")">
+                                <div class="alert alert-secondary py-3 small mb-2 text-center bg-dark border-secondary">
+                                    <i class="fa-solid fa-moon text-warning fs-3 mb-2 d-block"></i>
+                                    <strong class="text-white d-block mb-1">Astrologer is Currently Offline</strong>
+                                    <span class="text-secondary small">This astrologer is taking a break and not accepting consultation calls or chats right now.</span>
+                                </div>
+                                <button class="btn btn-secondary w-100 py-3 fw-bold opacity-50" disabled style="cursor: not-allowed;" title="Astrologer is currently offline">
+                                    <i class="fa-solid fa-lock me-2"></i> Consultations Locked (Offline)
+                                </button>
+                            </div>
                         }
                         else
                         {
@@ -208,6 +229,8 @@
 
 @section Scripts {
     <script>
+        window.currentAstroPublicId = '@Model.PublicId';
+
         function startSession(astroId, sessionType) {
             document.getElementById("formAstroId").value = astroId;
             document.getElementById("formSessionType").value = sessionType;

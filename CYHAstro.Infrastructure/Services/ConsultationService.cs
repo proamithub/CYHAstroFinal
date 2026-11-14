@@ -40,9 +40,9 @@ public sealed class ConsultationService : IConsultationService
         if (userId <= 0) return Result<ConsultationResponseDto>.Failure(Result.ErrorCodes.Unauthorized, "User not authenticated.");
 
         var astro = await _astrologerRepo.GetByPublicIdAsync(request.AstrologerPublicId, ct);
-        if (astro == null || !astro.IsActive)
+        if (astro == null || !astro.IsActive || !astro.IsAvailable)
         {
-            return Result<ConsultationResponseDto>.Failure(Result.ErrorCodes.NotFound, "Astrologer is not currently available for consultations.");
+            return Result<ConsultationResponseDto>.Failure(Result.ErrorCodes.NotFound, "Astrologer is currently offline. Please try again when the astrologer is online.");
         }
 
         var sessionType = request.SessionType.ToUpperInvariant();

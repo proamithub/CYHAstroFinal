@@ -82,7 +82,14 @@
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <h6 class="fw-bold text-white mb-0">@astro.DisplayName</h6>
-                                    <span class="badge-online"><i class="fa-solid fa-circle me-1" style="font-size: 6px;"></i> Online</span>
+                                    @if (astro.IsAvailable)
+                                    {
+                                        <span class="badge-online" data-astro-badge="@astro.PublicId"><i class="fa-solid fa-circle me-1" style="font-size: 6px;"></i> Online</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-offline" data-astro-badge="@astro.PublicId"><i class="fa-solid fa-circle me-1 text-secondary" style="font-size: 6px;"></i> Offline</span>
+                                    }
                                 </div>
                                 <div class="d-flex align-items-center gap-1 my-1">
                                     <i class="fa-solid fa-star gold-star small"></i>
@@ -123,9 +130,18 @@
                                 <a href="/Astrologer/Detail/@astro.PublicId" class="btn btn-outline-gold btn-sm px-3">
                                     Profile
                                 </a>
-                                <a href="/Astrologer/Detail/@astro.PublicId?action=chat" class="btn btn-gold btn-sm px-3">
-                                    <i class="fa-solid fa-comment-dots me-1"></i> Consult
-                                </a>
+                                @if (astro.IsAvailable)
+                                {
+                                    <a href="/Astrologer/Detail/@astro.PublicId?action=chat" class="btn btn-gold btn-sm px-3" data-astro-chat-btn="@astro.PublicId">
+                                        <i class="fa-solid fa-comment-dots me-1"></i> Consult
+                                    </a>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-secondary btn-sm px-3 opacity-50" disabled style="cursor: not-allowed;" data-astro-chat-btn="@astro.PublicId" title="Astrologer is currently offline">
+                                        <i class="fa-solid fa-lock me-1"></i> Offline
+                                    </button>
+                                }
                             </div>
                         </div>
                     </div>

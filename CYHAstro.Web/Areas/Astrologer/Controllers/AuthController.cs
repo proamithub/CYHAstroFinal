@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CYHAstro.Web.Areas.Astrologer.Controllers;
 
@@ -155,6 +157,40 @@ public sealed class AuthController : Controller
     [HttpPost]
     public async Task<IActionResult> Logout()
     {
+        var val = User.FindFirstValue("userId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (long.TryParse(val, out var userId) && userId > 0)
+        {
+            try
+            {
+                using var conn = await _db.CreateOpenConnectionAsync();
+                var astro = await conn.QuerySingleOrDefaultAsync<dynamic>(
+                    "SELECT Id, PublicId FROM dbo.Astrologers WHERE UserId = @UserId AND IsDeleted = 0",
+                    new { UserId = userId });
+
+                if (astro != null)
+                {
+                    await conn.ExecuteAsync(
+                        "UPDATE dbo.Astrologers SET IsAvailable = 0, UpdatedAt = GETUTCDATE() WHERE Id = @Id",
+                        new { Id = (long)astro.Id });
+
+                    var hubContext = HttpContext.RequestServices.GetService<IHubContext<CYHAstro.Web.Hubs.ConsultationHub>>();
+                    if (hubContext != null)
+                    {
+                        await hubContext.Clients.All.SendAsync("AstrologerStatusChanged", new
+                        {
+                            astrologerId = (long)astro.Id,
+                            publicId = (string)astro.PublicId,
+                            isAvailable = false
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error marking astrologer offline during logout for user {UserId}", userId);
+            }
+        }
+
         await HttpContext.SignOutAsync("AstrologerCookie");
         return RedirectToAction(nameof(Login));
     }

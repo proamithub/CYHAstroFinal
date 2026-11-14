@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using CYHAstro.Core.DTOs.Astrologer;
 using CYHAstro.Core.Interfaces.Services;
+using CYHAstro.Web.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace CYHAstro.Web.Areas.Astrologer.Controllers;
 
@@ -12,15 +14,18 @@ public sealed class HomeController : Controller
 {
     private readonly IAstrologerService _astrologerService;
     private readonly IConsultationService _consultationService;
+    private readonly IHubContext<ConsultationHub> _hubContext;
     private readonly ILogger<HomeController> _logger;
 
     public HomeController(
         IAstrologerService astrologerService,
         IConsultationService consultationService,
+        IHubContext<ConsultationHub> hubContext,
         ILogger<HomeController> logger)
     {
         _astrologerService = astrologerService;
         _consultationService = consultationService;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
@@ -55,6 +60,17 @@ public sealed class HomeController : Controller
         var updateRes = await _astrologerService.SetAvailabilityAsync(astroRes.Value.Id, request.IsAvailable, ct);
         if (updateRes.IsSuccess)
         {
+            _logger.LogInformation("Astrologer {AstroId} ({PublicId}) toggled availability to {IsAvailable}",
+                astroRes.Value.Id, astroRes.Value.PublicId, request.IsAvailable);
+
+            // Broadcast real-time presence change to all seekers/clients instantly
+            await _hubContext.Clients.All.SendAsync("AstrologerStatusChanged", new
+            {
+                astrologerId = astroRes.Value.Id,
+                publicId = astroRes.Value.PublicId,
+                isAvailable = request.IsAvailable
+            }, ct);
+
             return Ok(new { isAvailable = request.IsAvailable, message = "Status updated." });
         }
 

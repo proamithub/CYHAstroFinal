@@ -123,6 +123,19 @@ body {
     font-size: 0.75rem;
     padding: 0.25rem 0.6rem;
     border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-offline {
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
 }
 
 .badge-verified {

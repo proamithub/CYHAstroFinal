@@ -54,8 +54,8 @@ public sealed class AstrologerService : IAstrologerService
         var dtos = pagedResult.Items.Select(MapToListingDto).ToList();
         var result = PagedResult<AstrologerListingDto>.Create(dtos, filter.Page, filter.PageSize, pagedResult.TotalCount);
 
-        // Cache for 60 seconds
-        await _cache.SetAsync(cacheKey, result, TimeSpan.FromSeconds(60), ct);
+        // Cache for 5 seconds for responsive live presence
+        await _cache.SetAsync(cacheKey, result, TimeSpan.FromSeconds(5), ct);
 
         return Result<PagedResult<AstrologerListingDto>>.Success(result);
     }
