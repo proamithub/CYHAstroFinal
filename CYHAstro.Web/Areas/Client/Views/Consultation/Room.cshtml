@@ -53,8 +53,9 @@
         {
             <!-- Video / Audio Stream Grid -->
             <div class="col-lg-7">
-                <div class="card cosmic-card p-3 h-100 d-flex flex-column" style="min-height: 520px;">
-                    <div class="flex-grow-1 position-relative rounded-4 overflow-hidden bg-black d-flex align-items-center justify-content-center border border-secondary border-opacity-50" id="videoContainer">
+                <div class="card cosmic-card p-3 mb-3" style="min-height: 480px;">
+                    <div class="position-relative rounded-4 overflow-hidden bg-black d-flex align-items-center justify-content-center border border-secondary border-opacity-50"
+                         style="height: 420px; min-height: 420px;" id="videoContainer">
                         <!-- Waiting Overlay — hidden once astrologer accepts -->
                         <div id="waitingOverlay" class="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-black bg-opacity-90" style="z-index: 10; border-radius: 12px; @(Model.Status == "ACTIVE" ? "display: none;" : "")">
                             <div class="spinner-grow text-warning mb-3" style="width: 3.5rem; height: 3.5rem;" role="status"></div>
@@ -314,18 +315,25 @@
 
         connection.on("UserJoinedSession", function (data) {
             console.log("Participant joined:", data.displayName);
-            if (timerStarted && (sessionType === 'VIDEO' || sessionType === 'AUDIO')) {
+            if (sessionType === 'VIDEO' || sessionType === 'AUDIO') {
                 connection.invoke("RequestMediaOffer", sessionPublicId).catch(() => {});
             }
         });
 
         // WebRTC signaling receivers
         connection.on("ReceiveMediaOffer", async function (offer) {
-            console.log("Seeker received media offer");
-            if (!peerConnection) await initWebRTC();
-            if (!peerConnection) return;
+            console.log("Seeker received media offer:", offer);
+            await initWebRTC();
+            if (!peerConnection) {
+                console.error("PeerConnection not ready to answer offer");
+                return;
+            }
             try {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const desc = new RTCSessionDescription({
+                    type: (offer.type || offer.Type || 'offer').toLowerCase(),
+                    sdp: offer.sdp || offer.Sdp
+                });
+                await peerConnection.setRemoteDescription(desc);
                 await drainIceCandidates();
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
@@ -333,16 +341,21 @@
                     type: answer.type,
                     sdp: answer.sdp
                 });
+                console.log("Seeker answer sent successfully");
             } catch (err) {
                 console.error("Error answering offer:", err);
             }
         });
 
         connection.on("ReceiveMediaAnswer", async function (answer) {
-            console.log("Received media answer");
+            console.log("Received media answer:", answer);
             if (peerConnection) {
                 try {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                    const desc = new RTCSessionDescription({
+                        type: (answer.type || answer.Type || 'answer').toLowerCase(),
+                        sdp: answer.sdp || answer.Sdp
+                    });
+                    await peerConnection.setRemoteDescription(desc);
                     await drainIceCandidates();
                 } catch (err) {
                     console.error("Error setting remote answer:", err);
@@ -469,14 +482,17 @@
         // ===================== WebRTC =====================
         let peerConnection = null;
         let localStream = null;
-        let isInitializingWebRTC = false;
+        let initWebRTCPromise = null;
         let remoteIceQueue = [];
 
         const iceServers = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
                 { urls: "stun:stun1.l.google.com:19302" },
-                { urls: "stun:stun2.l.google.com:19302" }
+                { urls: "stun:stun2.l.google.com:19302" },
+                { urls: "stun:stun3.l.google.com:19302" },
+                { urls: "stun:stun4.l.google.com:19302" },
+                { urls: "stun:stun.cloudflare.com:3478" }
             ]
         };
 
@@ -489,8 +505,7 @@
                     audio: true,
                     video: {
                         width: { ideal: 1280, max: 1920 },
-                        height: { ideal: 720, max: 1080 },
-                        facingMode: 'user'
+                        height: { ideal: 720, max: 1080 }
                     }
                 });
             } catch (err1) {
@@ -504,119 +519,160 @@
             }
         }
 
+        function parseClientCandidate(raw) {
+            if (!raw) return null;
+            const candStr = raw.candidate ?? raw.Candidate;
+            if (candStr === undefined || candStr === null || (candStr !== '' && typeof candStr !== 'string')) return null;
+            return new RTCIceCandidate({
+                candidate: candStr,
+                sdpMid: raw.sdpMid ?? raw.SdpMid ?? null,
+                sdpMLineIndex: raw.sdpMLineIndex ?? raw.SdpMLineIndex ?? 0
+            });
+        }
+
         async function addIceCandidateSafely(candidate) {
-            if (!candidate || (!candidate.candidate && candidate.candidate !== '')) return;
+            const ice = parseClientCandidate(candidate);
+            if (!ice) return;
             if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
                 try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                    await peerConnection.addIceCandidate(ice);
                 } catch (e) {
                     console.warn("Client addIceCandidate error:", e);
                 }
             } else {
-                remoteIceQueue.push(candidate);
+                remoteIceQueue.push(ice);
             }
         }
 
         async function drainIceCandidates() {
             if (!peerConnection) return;
             while (remoteIceQueue.length > 0) {
-                const cand = remoteIceQueue.shift();
+                const ice = remoteIceQueue.shift();
                 try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+                    await peerConnection.addIceCandidate(ice);
                 } catch (e) {
                     console.warn("Client drain candidate error:", e);
                 }
             }
         }
 
-        async function initWebRTC() {
-            if (localStream || isInitializingWebRTC) return;
-            isInitializingWebRTC = true;
+        function initWebRTC() {
+            if (peerConnection) return Promise.resolve(peerConnection);
+            if (initWebRTCPromise) return initWebRTCPromise;
 
-            try {
-                const isVideo = sessionType === 'VIDEO';
-                localStream = await getClientMediaStream(isVideo);
+            initWebRTCPromise = (async () => {
+                try {
+                    const isVideo = sessionType === 'VIDEO';
+                    localStream = await getClientMediaStream(isVideo);
 
-                // Show local video PiP
-                if (isVideo) {
-                    const localContainer = document.getElementById('localParticipantCard');
-                    if (localContainer) {
-                        localContainer.innerHTML = '';
-                        const localVid = document.createElement('video');
-                        localVid.srcObject = localStream;
-                        localVid.autoplay = true;
-                        localVid.muted = true;
-                        localVid.playsInline = true;
-                        localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
-                        localContainer.appendChild(localVid);
-                        localVid.play().catch(() => {});
+                    // Show local video PiP
+                    if (isVideo) {
+                        const localContainer = document.getElementById('localParticipantCard');
+                        if (localContainer) {
+                            localContainer.innerHTML = '';
+                            const localVid = document.createElement('video');
+                            localVid.srcObject = localStream;
+                            localVid.autoplay = true;
+                            localVid.muted = true;
+                            localVid.defaultMuted = true;
+                            localVid.setAttribute('muted', '');
+                            localVid.playsInline = true;
+                            localVid.setAttribute('playsinline', '');
+                            localVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px;';
+                            localContainer.appendChild(localVid);
+                            localVid.play().catch(() => {});
+                        }
                     }
+
+                    peerConnection = new RTCPeerConnection(iceServers);
+                    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            connection.invoke("SignalIceCandidate", sessionPublicId, {
+                                candidate: event.candidate.candidate,
+                                sdpMid: event.candidate.sdpMid,
+                                sdpMLineIndex: event.candidate.sdpMLineIndex
+                            });
+                        }
+                    };
+
+                    peerConnection.onconnectionstatechange = () => {
+                        console.log("Client WebRTC connectionState:", peerConnection.connectionState);
+                        if (peerConnection.connectionState === 'connected') {
+                            const placeholder = document.getElementById('remoteParticipantCard');
+                            if (placeholder) { placeholder.style.display = 'none'; placeholder.classList.add('d-none'); }
+                            const waitingOverlay = document.getElementById('waitingOverlay');
+                            if (waitingOverlay) { waitingOverlay.style.display = 'none'; waitingOverlay.classList.add('d-none'); }
+                        }
+                    };
+
+                    peerConnection.ontrack = (event) => {
+                        console.log("Client received astrologer track:", event.track.kind);
+                        const placeholder = document.getElementById('remoteParticipantCard');
+                        if (placeholder) {
+                            placeholder.style.display = 'none';
+                            placeholder.classList.add('d-none');
+                        }
+                        const waitingOverlay = document.getElementById('waitingOverlay');
+                        if (waitingOverlay) {
+                            waitingOverlay.style.display = 'none';
+                            waitingOverlay.classList.add('d-none');
+                        }
+
+                        const container = document.getElementById('videoContainer');
+
+                        if (event.track.kind === 'video') {
+                            let remoteVid = document.getElementById('remoteVideoEl');
+                            if (!remoteVid) {
+                                remoteVid = document.createElement('video');
+                                remoteVid.id = 'remoteVideoEl';
+                                remoteVid.autoplay = true;
+                                remoteVid.playsInline = true;
+                                remoteVid.setAttribute('playsinline', '');
+                                remoteVid.muted = true;
+                                remoteVid.defaultMuted = true;
+                                remoteVid.setAttribute('muted', '');
+                                remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0; z-index: 5;';
+                                container.appendChild(remoteVid);
+                            }
+                            if (event.streams && event.streams[0]) {
+                                remoteVid.srcObject = event.streams[0];
+                            } else {
+                                if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
+                                remoteVid.srcObject.addTrack(event.track);
+                            }
+                            remoteVid.play().catch(e => console.warn("Client video play notice:", e));
+                        } else if (event.track.kind === 'audio') {
+                            let remoteAudio = document.getElementById('remoteAudioEl');
+                            if (!remoteAudio) {
+                                remoteAudio = document.createElement('audio');
+                                remoteAudio.id = 'remoteAudioEl';
+                                remoteAudio.autoplay = true;
+                                document.body.appendChild(remoteAudio);
+                            }
+                            if (event.streams && event.streams[0]) {
+                                remoteAudio.srcObject = event.streams[0];
+                            } else {
+                                if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
+                                remoteAudio.srcObject.addTrack(event.track);
+                            }
+                            remoteAudio.play().catch(e => console.warn("Client audio play notice:", e));
+                        }
+                    };
+
+                    return peerConnection;
+
+                } catch (err) {
+                    console.error("Camera/Mic access error:", err);
+                    alert("Could not access camera or microphone. Please allow permissions in your browser.");
+                    return null;
+                } finally {
+                    initWebRTCPromise = null;
                 }
+            })();
 
-                peerConnection = new RTCPeerConnection(iceServers);
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.onicecandidate = (event) => {
-                    if (event.candidate) {
-                        connection.invoke("SignalIceCandidate", sessionPublicId, {
-                            candidate: event.candidate.candidate,
-                            sdpMid: event.candidate.sdpMid,
-                            sdpMLineIndex: event.candidate.sdpMLineIndex
-                        });
-                    }
-                };
-
-                peerConnection.ontrack = (event) => {
-                    console.log("Client received astrologer track:", event.track.kind);
-                    const placeholder = document.getElementById('remoteParticipantCard');
-                    if (placeholder) placeholder.style.display = 'none';
-                    const waitingOverlay = document.getElementById('waitingOverlay');
-                    if (waitingOverlay) waitingOverlay.style.display = 'none';
-
-                    const container = document.getElementById('videoContainer');
-
-                    if (event.track.kind === 'video') {
-                        let remoteVid = document.getElementById('remoteVideoEl');
-                        if (!remoteVid) {
-                            remoteVid = document.createElement('video');
-                            remoteVid.id = 'remoteVideoEl';
-                            remoteVid.autoplay = true;
-                            remoteVid.playsInline = true;
-                            remoteVid.muted = true; // muted to prevent browser autoplay block
-                            remoteVid.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 12px; position: absolute; top: 0; left: 0; z-index: 1;';
-                            container.appendChild(remoteVid);
-                        }
-                        if (event.streams && event.streams[0]) {
-                            remoteVid.srcObject = event.streams[0];
-                        } else {
-                            if (!remoteVid.srcObject) remoteVid.srcObject = new MediaStream();
-                            remoteVid.srcObject.addTrack(event.track);
-                        }
-                        remoteVid.play().catch(e => console.warn("Client video play notice:", e));
-                    } else if (event.track.kind === 'audio') {
-                        let remoteAudio = document.getElementById('remoteAudioEl');
-                        if (!remoteAudio) {
-                            remoteAudio = document.createElement('audio');
-                            remoteAudio.id = 'remoteAudioEl';
-                            remoteAudio.autoplay = true;
-                            document.body.appendChild(remoteAudio);
-                        }
-                        if (event.streams && event.streams[0]) {
-                            remoteAudio.srcObject = event.streams[0];
-                        } else {
-                            if (!remoteAudio.srcObject) remoteAudio.srcObject = new MediaStream();
-                            remoteAudio.srcObject.addTrack(event.track);
-                        }
-                        remoteAudio.play().catch(e => console.warn("Client audio play notice:", e));
-                    }
-                };
-
-            } catch (err) {
-                console.error("Camera/Mic access error:", err);
-                alert("Could not access camera or microphone. Please allow permissions in your browser.");
-            } finally {
-                isInitializingWebRTC = false;
-            }
+            return initWebRTCPromise;
         }
 
         function closeWebRTC() {
@@ -629,8 +685,17 @@
                 peerConnection = null;
             }
             remoteIceQueue = [];
-            isInitializingWebRTC = false;
+            initWebRTCPromise = null;
         }
+
+        function ensureAudioPlaying() {
+            const audioEl = document.getElementById('remoteAudioEl');
+            if (audioEl && audioEl.paused && audioEl.srcObject) {
+                audioEl.play().catch(() => {});
+            }
+        }
+        document.addEventListener('click', ensureAudioPlaying, { passive: true });
+        document.addEventListener('touchstart', ensureAudioPlaying, { passive: true });
 
         let isAudioMuted = false;
         async function toggleAudio() {
