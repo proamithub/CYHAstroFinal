@@ -1,0 +1,19 @@
+{
+  "Google": {
+    "ClientId": "63923023387-s975nb1gdal7ovjjn76co4q6qi38l61a.apps.googleusercontent.com",
+    "ClientSecret": "YOUR_GOOGLE_CLIENT_SECRET_HERE"
+  },
+  "GeminiSettings": {
+    "ApiKey": "YOUR_GEMINI_API_KEY_HERE",
+    "ModelName": "gemini-1.5-flash"
+  },
+  "Razorpay": {
+    "KeyId": "rzp_live_OR_test_YOUR_KEY_ID",
+    "KeySecret": "YOUR_RAZORPAY_KEY_SECRET"
+  },
+  "LiveKitSettings": {
+    "LiveKitUrl": "wss://your-livekit-server.cloud",
+    "ApiKey": "YOUR_LIVEKIT_API_KEY",
+    "ApiSecret": "YOUR_LIVEKIT_API_SECRET"
+  }
+}

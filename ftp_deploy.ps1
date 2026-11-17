@@ -1,62 +1,92 @@
+$ErrorActionPreference = "Stop"
+
 $ftpHost = 'ftp://208.91.198.227'
 $ftpUser = 'patnag5f'
 $ftpPass = 'CYHBrand@PassAK'
-$remotePath = '/cyhastro.patnaorthoclinic.com'
-$localPublish = 'D:\samle pro\CyhAstro\publish\web'
+$webRemotePath = '/cyhastro.patnaorthoclinic.com'
+$apiRemotePath = '/cyhastroapi.patnaorthoclinic.com'
+$localWebPublish = 'D:\MyAppAi\CYHAstroFinal\publish\web'
+$localApiPublish = 'D:\MyAppAi\CYHAstroFinal\publish\api'
 
-function Upload-File($localFile, $remoteName) {
-    $uri = [System.Uri]("$ftpHost$remotePath/$remoteName")
-    $ftp = [System.Net.FtpWebRequest]::Create($uri)
-    $ftp.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
-    $ftp.Credentials = New-Object System.Net.NetworkCredential($ftpUser, $ftpPass)
-    $ftp.UseBinary = $true
-    $ftp.UsePassive = $true
-    $bytes = [System.IO.File]::ReadAllBytes($localFile)
-    $ftp.ContentLength = $bytes.Length
-    $stream = $ftp.GetRequestStream()
-    $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Close()
-    Write-Host "Uploaded: $remoteName ($($bytes.Length) bytes)"
+function Upload-Curl($localFile, $remoteFullPath) {
+    if (-not (Test-Path $localFile)) {
+        Write-Host "Skipped (not found): $localFile"
+        return
+    }
+    $url = "$ftpHost$remoteFullPath"
+    Write-Host "Uploading $localFile -> $remoteFullPath ..."
+    & curl.exe --silent --show-error --fail --ftp-create-dirs -u "${ftpUser}:${ftpPass}" -T "$localFile" "$url"
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to upload $remoteFullPath (exit code $LASTEXITCODE)"
+    }
+    Write-Host "OK: $remoteFullPath"
 }
 
-# Upload app_offline.htm
-$offlineContent = [System.Text.Encoding]::UTF8.GetBytes('<html><body>Site updating...</body></html>')
-$uri2 = [System.Uri]("$ftpHost$remotePath/app_offline.htm")
-$ftp2 = [System.Net.FtpWebRequest]::Create($uri2)
-$ftp2.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
-$ftp2.Credentials = New-Object System.Net.NetworkCredential($ftpUser, $ftpPass)
-$ftp2.UseBinary = $true
-$ftp2.UsePassive = $true
-$ftp2.ContentLength = $offlineContent.Length
-$s = $ftp2.GetRequestStream()
-$s.Write($offlineContent, 0, $offlineContent.Length)
-$s.Close()
-Write-Host "app_offline.htm uploaded - site offline"
-Start-Sleep -Seconds 2
+function Delete-Curl($remoteFullPath) {
+    Write-Host "Deleting $remoteFullPath ..."
+    & curl.exe --silent --show-error -u "${ftpUser}:${ftpPass}" "$ftpHost/" -Q "DELE $remoteFullPath" | Out-Null
+    Write-Host "Deleted (or not present): $remoteFullPath"
+}
 
-# Upload all DLLs + PDBs + Static Assets
-Upload-File (Join-Path $localPublish 'CYHAstro.Web.dll') 'CYHAstro.Web.dll'
-Upload-File (Join-Path $localPublish 'CYHAstro.Web.pdb') 'CYHAstro.Web.pdb'
-Upload-File (Join-Path $localPublish 'CYHAstro.Infrastructure.dll') 'CYHAstro.Infrastructure.dll'
-Upload-File (Join-Path $localPublish 'CYHAstro.Infrastructure.pdb') 'CYHAstro.Infrastructure.pdb'
-Upload-File (Join-Path $localPublish 'CYHAstro.Core.dll') 'CYHAstro.Core.dll'
-Upload-File (Join-Path $localPublish 'CYHAstro.Core.pdb') 'CYHAstro.Core.pdb'
+# Create temporary app_offline.htm locally
+$offlineLocal = Join-Path $env:TEMP 'cyhastro_app_offline.htm'
+Set-Content -Path $offlineLocal -Value '<html><body style="font-family:sans-serif;text-align:center;padding:50px;background:#0a0d14;color:#fff;"><h2>CYHAstro is updating... Back online in a few seconds!</h2></body></html>' -Encoding UTF8
 
-# Upload updated site.css for mobile & speed optimizations
-Upload-File (Join-Path $localPublish 'wwwroot\css\site.css') 'wwwroot/css/site.css'
+Write-Host "=== Step 1: Deploying CYHAstro.Web to $webRemotePath ==="
+Upload-Curl $offlineLocal "$webRemotePath/app_offline.htm"
+Start-Sleep -Seconds 3
 
-Write-Host "All DLLs and CSS uploaded successfully!"
-
-# Remove app_offline.htm
-$uri3 = [System.Uri]("$ftpHost$remotePath/app_offline.htm")
-$ftp3 = [System.Net.FtpWebRequest]::Create($uri3)
-$ftp3.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
-$ftp3.Credentials = New-Object System.Net.NetworkCredential($ftpUser, $ftpPass)
-$ftp3.UsePassive = $true
 try {
-    $resp = $ftp3.GetResponse()
-    $resp.Close()
-    Write-Host "app_offline.htm removed - site LIVE again!"
-} catch {
-    Write-Host "Note: Could not remove app_offline.htm - remove manually"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Web.dll') "$webRemotePath/CYHAstro.Web.dll"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Web.pdb') "$webRemotePath/CYHAstro.Web.pdb"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Infrastructure.dll') "$webRemotePath/CYHAstro.Infrastructure.dll"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Infrastructure.pdb') "$webRemotePath/CYHAstro.Infrastructure.pdb"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Core.dll') "$webRemotePath/CYHAstro.Core.dll"
+    Upload-Curl (Join-Path $localWebPublish 'CYHAstro.Core.pdb') "$webRemotePath/CYHAstro.Core.pdb"
+    Upload-Curl (Join-Path $localWebPublish 'wwwroot\css\site.css') "$webRemotePath/wwwroot/css/site.css"
+
+    # Check live appsettings.json & appsettings.Production.json Gemini key (read from env or appsettings.Local.json)
+    $geminiKey = $env:GEMINI_API_KEY
+    if ([string]::IsNullOrWhiteSpace($geminiKey) -and (Test-Path "D:\MyAppAi\CYHAstroFinal\CYHAstro.Web\appsettings.Local.json")) {
+        $localCfg = Get-Content "D:\MyAppAi\CYHAstroFinal\CYHAstro.Web\appsettings.Local.json" -Raw | ConvertFrom-Json
+        $geminiKey = $localCfg.GeminiSettings.ApiKey
+    }
+    foreach ($cfgName in @("appsettings.json", "appsettings.Production.json")) {
+        $liveSettings = & curl.exe --silent -u "${ftpUser}:${ftpPass}" "$ftpHost$webRemotePath/$cfgName"
+        if (-not [string]::IsNullOrWhiteSpace($geminiKey) -and $liveSettings -match "YOUR_GEMINI_API_KEY_HERE") {
+            Write-Host "Live $cfgName still has placeholder Gemini key! Updating Gemini key..."
+            $updatedSettings = $liveSettings -replace "YOUR_GEMINI_API_KEY_HERE", $geminiKey
+            $tmpSettings = Join-Path $env:TEMP "cyhastro_live_$cfgName"
+            Set-Content -Path $tmpSettings -Value $updatedSettings -Encoding UTF8
+            Upload-Curl $tmpSettings "$webRemotePath/$cfgName"
+            Remove-Item $tmpSettings -Force
+        }
+    }
 }
+finally {
+    Delete-Curl "$webRemotePath/app_offline.htm"
+}
+
+Write-Host "=== Step 2: Checking CYHAstro.Api at $apiRemotePath ==="
+$apiList = & curl.exe --silent -u "${ftpUser}:${ftpPass}" "$ftpHost$apiRemotePath/"
+if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($apiList)) {
+    Write-Host "Found API folder on server. Deploying CYHAstro.Api..."
+    Upload-Curl $offlineLocal "$apiRemotePath/app_offline.htm"
+    Start-Sleep -Seconds 2
+    try {
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Api.dll') "$apiRemotePath/CYHAstro.Api.dll"
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Api.pdb') "$apiRemotePath/CYHAstro.Api.pdb"
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Infrastructure.dll') "$apiRemotePath/CYHAstro.Infrastructure.dll"
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Infrastructure.pdb') "$apiRemotePath/CYHAstro.Infrastructure.pdb"
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Core.dll') "$apiRemotePath/CYHAstro.Core.dll"
+        Upload-Curl (Join-Path $localApiPublish 'CYHAstro.Core.pdb') "$apiRemotePath/CYHAstro.Core.pdb"
+    }
+    finally {
+        Delete-Curl "$apiRemotePath/app_offline.htm"
+    }
+} else {
+    Write-Host "API remote directory $apiRemotePath not present on this FTP account (or empty)."
+}
+
+Remove-Item $offlineLocal -Force -ErrorAction SilentlyContinue
+Write-Host "=== Deployment Finished Successfully! ==="

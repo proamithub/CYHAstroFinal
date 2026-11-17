@@ -185,6 +185,11 @@ app.MapControllerRoute(
     pattern: "AiChat/{action=Index}/{id?}",
     defaults: new { area = "Client", controller = "AiChat" });
 
+app.MapControllerRoute(
+    name: "ScansRoute",
+    pattern: "Scans/{action=Index}/{id?}",
+    defaults: new { area = "Client", controller = "Scans" });
+
 // Seeker Astrologer Directory & Profile Routes
 app.MapControllerRoute(
     name: "ClientAstrologersRoute",

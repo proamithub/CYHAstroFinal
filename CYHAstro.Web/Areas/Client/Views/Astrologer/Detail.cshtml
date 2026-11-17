@@ -24,8 +24,8 @@
                     <img src="@(string.IsNullOrEmpty(Model.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=300" : Model.ProfilePhotoUrl)"
                          alt="@Model.DisplayName" class="astro-avatar" style="width: 100px; height: 100px;" />
 
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-1">
+                    <div class="min-w-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <h3 class="fw-bold text-white mb-0 brand-font">@Model.DisplayName</h3>
                             <span class="badge-verified"><i class="fa-solid fa-certificate me-1"></i> Verified</span>
                             @if (Model.IsAvailable)
@@ -37,7 +37,7 @@
                                 <span class="badge-offline" data-astro-badge="@Model.PublicId" id="astroProfileBadge"><i class="fa-solid fa-circle me-1 text-secondary" style="font-size: 6px;"></i> Offline</span>
                             }
                         </div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             <div class="d-flex align-items-center text-warning">
                                 <i class="fa-solid fa-star gold-star me-1"></i>
                                 <span class="fw-bold">@Model.Rating.ToString("F2")</span>

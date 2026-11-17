@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>@ViewData["Title"] - CYHAstro | India's Premier Vedic Astrology Platform</title>
+    <link rel="icon" type="image/png" href="~/images/cyhastro-favicon.png" asp-append-version="true" />
 
     <!-- Resource Preconnects for Ultra Fast Mobile Speed -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -26,138 +27,258 @@
     <!-- Site Styles -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var hideMobileBottomNav = string.Equals(currentController, "Consultation", StringComparison.OrdinalIgnoreCase)
+                           && string.Equals(currentAction, "Room", StringComparison.OrdinalIgnoreCase);
+    bool IsActive(string ctrl, string? act = null) =>
+        string.Equals(currentController, ctrl, StringComparison.OrdinalIgnoreCase) &&
+        (act == null || string.Equals(currentAction, act, StringComparison.OrdinalIgnoreCase));
+}
+<body class="@(hideMobileBottomNav ? "no-mobile-nav" : "has-mobile-nav")">
     <!-- Top Navbar -->
     <header class="sticky-top">
-        <nav class="navbar navbar-expand-lg navbar-cosmic py-3">
-            <div class="container">
+        <nav class="navbar navbar-expand-xl navbar-cosmic">
+            <div class="container-fluid px-3 px-xxl-4" style="max-width: 1440px;">
                 <!-- Brand -->
-                <a class="navbar-brand d-flex align-items-center gap-2 brand-font fw-bold" asp-controller="Home" asp-action="Index">
-                    <span class="fs-4 text-warning"><i class="fa-solid fa-sun-plant-wilt fa-spin" style="--fa-animation-duration: 25s;"></i></span>
-                    <span class="fs-4 text-white">CYH<span class="text-warning">Astro</span></span>
+                <a class="navbar-brand d-flex align-items-center gap-2 brand-font fw-bold m-0 flex-shrink-0" asp-controller="Home" asp-action="Index">
+                    <img src="~/images/cyhastro-logo.png" alt="CYHAstro Logo" class="brand-logo-img" asp-append-version="true" />
+                    <span class="brand-title text-white">CYH<span class="text-warning">Astro</span></span>
                 </a>
 
-                <!-- Mobile Toggle -->
-                <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain"
-                        aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-                    <i class="fa-solid fa-bars fs-4 text-warning"></i>
-                </button>
+                <!-- Desktop Horizontal Nav (>= 1200px) -->
+                <ul class="navbar-nav cosmic-desktop-nav d-none d-xl-flex align-items-center mx-auto gap-1">
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Astrologer") ? "active" : "")" asp-controller="Astrologer" asp-action="Index">
+                            <i class="fa-solid fa-comments text-warning"></i><span>Astrologers</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Horoscope") ? "active" : "")" asp-controller="Horoscope" asp-action="Index">
+                            <i class="fa-solid fa-moon text-info"></i><span>Horoscope</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Panchang") ? "active" : "")" asp-controller="Panchang" asp-action="Index">
+                            <i class="fa-solid fa-om text-warning"></i><span>Panchang</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Kundli", "Index") || IsActive("Kundli", "Result") ? "active" : "")" asp-controller="Kundli" asp-action="Index">
+                            <i class="fa-solid fa-circle-nodes text-warning"></i><span>Kundli</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Kundli", "Matchmaking") || IsActive("Kundli", "MatchmakingResult") ? "active" : "")" asp-controller="Kundli" asp-action="Matchmaking">
+                            <i class="fa-solid fa-heart text-danger"></i><span>Milan</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("AiChat") ? "active" : "")" asp-controller="AiChat" asp-action="Index">
+                            <i class="fa-solid fa-sparkles text-info"></i><span>AI Chat</span>
+                            <span class="nav-pill-tag tag-gold">AI</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(IsActive("Scans") ? "active" : "")" asp-controller="Scans" asp-action="Index">
+                            <i class="fa-solid fa-hand text-warning"></i><span>Palm &amp; Face</span>
+                            <span class="nav-pill-tag tag-hot">NEW</span>
+                        </a>
+                    </li>
+                </ul>
 
-                <!-- Navigation Links -->
-                <div class="collapse navbar-collapse" id="navbarMain">
-                    <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Astrologer" asp-action="Index">
-                                <i class="fa-solid fa-comments text-warning me-1"></i> Astrologers
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Horoscope" asp-action="Index">
-                                <i class="fa-solid fa-moon text-info me-1"></i> Daily Horoscope
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Panchang" asp-action="Index">
-                                <i class="fa-solid fa-om text-warning me-1"></i> Panchang
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Kundli" asp-action="Index">
-                                <i class="fa-solid fa-circle-nodes text-warning me-1"></i> Free Kundli
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Kundli" asp-action="Matchmaking">
-                                <i class="fa-solid fa-heart text-danger me-1"></i> Kundli Milan
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="AiChat" asp-action="Index">
-                                <i class="fa-solid fa-sparkles text-info me-1"></i> Ask AI Astrologer <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">AI</span>
-                            </a>
-                        </li>
-                    </ul>
+                <!-- Right Header Actions (Always Single Row) -->
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <!-- Wallet Pill -->
+                        <a asp-controller="Wallet" asp-action="Index" class="wallet-pill" title="Recharge Wallet">
+                            <i class="fa-solid fa-wallet text-warning"></i>
+                            <span>₹<span id="navWalletBalance">--</span></span>
+                            <i class="fa-solid fa-circle-plus text-warning d-none d-sm-inline"></i>
+                        </a>
 
-                    <!-- User Actions -->
-                    <div class="d-flex align-items-center gap-3">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <!-- Wallet Pill -->
-                            <a asp-controller="Wallet" asp-action="Index" class="wallet-pill" title="Recharge Wallet">
-                                <i class="fa-solid fa-wallet text-warning"></i>
-                                <span>₹<span id="navWalletBalance">--</span></span>
-                                <i class="fa-solid fa-circle-plus ms-1 text-warning"></i>
-                            </a>
-
-                            <!-- Notifications Bell -->
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary position-relative py-1 px-2 text-warning border-0"
-                                        type="button" id="notifMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
-                                    <i class="fa-solid fa-bell fs-5"></i>
-                                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">
-                                        0
-                                    </span>
-                                </button>
-                                <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow p-0" style="width: 320px; max-height: 400px; overflow-y: auto;" aria-labelledby="notifMenuButton">
-                                    <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-black">
-                                        <h6 class="mb-0 text-white fw-bold brand-font small"><i class="fa-solid fa-bell text-warning me-1"></i> Notifications</h6>
-                                        <button type="button" class="btn btn-link text-warning p-0 text-decoration-none small" style="font-size: 0.75rem;" onclick="markAllNotifsRead()">Mark all read</button>
-                                    </div>
-                                    <div id="notifListContainer">
-                                        <div class="text-center py-4 text-secondary small">
-                                            <i class="fa-solid fa-bell-slash fs-4 text-secondary mb-2 d-block opacity-50"></i>
-                                            No notifications right now
-                                        </div>
+                        <!-- Notifications Bell -->
+                        <div class="dropdown">
+                            <button class="header-icon-btn position-relative"
+                                    type="button" id="notifMenuButton" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" aria-label="Notifications">
+                                <i class="fa-solid fa-bell"></i>
+                                <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.6rem;">
+                                    0
+                                </span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg p-0 cosmic-notif-menu" aria-labelledby="notifMenuButton">
+                                <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-black">
+                                    <h6 class="mb-0 text-white fw-bold brand-font small"><i class="fa-solid fa-bell text-warning me-1"></i> Notifications</h6>
+                                    <button type="button" class="btn btn-link text-warning p-0 text-decoration-none small" style="font-size: 0.75rem;" onclick="markAllNotifsRead()">Mark all read</button>
+                                </div>
+                                <div id="notifListContainer">
+                                    <div class="text-center py-4 text-secondary small">
+                                        <i class="fa-solid fa-bell-slash fs-4 text-secondary mb-2 d-block opacity-50"></i>
+                                        No notifications right now
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- User Dropdown -->
-                            <div class="dropdown">
-                                <button class="btn btn-outline-gold dropdown-toggle d-flex align-items-center gap-2 py-1 px-3"
-                                        type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa-regular fa-circle-user text-warning fs-5"></i>
-                                    <span>@(User.Identity?.Name ?? "My Account")</span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow" aria-labelledby="userMenuButton">
-                                    <li>
-                                        <a class="dropdown-item py-2" asp-controller="Dashboard" asp-action="Index">
-                                            <i class="fa-solid fa-id-card me-2 text-warning"></i> My Profile
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item py-2" asp-controller="Dashboard" asp-action="BirthProfiles">
-                                            <i class="fa-solid fa-users me-2 text-info"></i> Saved Birth Profiles
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item py-2" asp-controller="Wallet" asp-action="Index">
-                                            <i class="fa-solid fa-receipt me-2 text-success"></i> Wallet & Passbook
-                                        </a>
-                                    </li>
-                                    <li><hr class="dropdown-divider border-secondary" /></li>
-                                    <li>
-                                        <a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="Logout">
-                                            <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        }
-                        else
-                        {
-                            <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-gold px-3">
-                                <i class="fa-regular fa-user me-1"></i> Sign In
-                            </a>
-                            <a asp-controller="Auth" asp-action="Register" class="btn btn-gold px-3">
-                                Register Free
-                            </a>
-                        }
-                    </div>
+                        <!-- Desktop User Dropdown -->
+                        <div class="dropdown d-none d-xl-block">
+                            <button class="btn btn-outline-gold btn-sm dropdown-toggle d-flex align-items-center gap-2 py-1 px-3 header-user-btn"
+                                    type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-regular fa-circle-user text-warning fs-6"></i>
+                                <span class="text-truncate" style="max-width: 110px;">@(User.Identity?.Name ?? "Account")</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-warning shadow-lg mt-2" aria-labelledby="userMenuButton">
+                                <li>
+                                    <a class="dropdown-item py-2" asp-controller="Dashboard" asp-action="Index">
+                                        <i class="fa-solid fa-id-card me-2 text-warning"></i> My Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" asp-controller="Dashboard" asp-action="BirthProfiles">
+                                        <i class="fa-solid fa-users me-2 text-info"></i> Saved Birth Profiles
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" asp-controller="Wallet" asp-action="Index">
+                                        <i class="fa-solid fa-receipt me-2 text-success"></i> Wallet &amp; Passbook
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider border-secondary" /></li>
+                                <li>
+                                    <a class="dropdown-item py-2 text-danger" asp-controller="Auth" asp-action="Logout">
+                                        <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-gold btn-sm px-3 header-auth-btn">
+                            <i class="fa-regular fa-user me-1"></i><span>Sign In</span>
+                        </a>
+                        <a asp-controller="Auth" asp-action="Register" class="btn btn-gold btn-sm px-3 header-auth-btn d-none d-sm-inline-flex">
+                            Register
+                        </a>
+                    }
+
+                    <!-- Mobile / Tablet Menu Drawer Button (< 1200px) -->
+                    <button class="header-icon-btn d-xl-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNavDrawer"
+                            aria-controls="mobileNavDrawer" aria-label="Open navigation menu">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
                 </div>
             </div>
         </nav>
     </header>
+
+    <!-- Mobile / Tablet Slide-In Cosmic Navigation Drawer (< 1200px) -->
+    <div class="offcanvas offcanvas-end cosmic-offcanvas d-xl-none" tabindex="-1" id="mobileNavDrawer" aria-labelledby="mobileNavDrawerLabel">
+        <div class="offcanvas-header border-bottom border-secondary border-opacity-25 px-3 py-3">
+            <a class="d-flex align-items-center gap-2 brand-font fw-bold text-decoration-none" id="mobileNavDrawerLabel" asp-controller="Home" asp-action="Index">
+                <img src="~/images/cyhastro-logo.png" alt="CYHAstro Logo" class="brand-logo-img" style="width: 32px; height: 32px;" asp-append-version="true" />
+                <span class="fs-5 text-white">CYH<span class="text-warning">Astro</span></span>
+            </a>
+            <button type="button" class="header-icon-btn" data-bs-dismiss="offcanvas" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="offcanvas-body d-flex flex-column p-3">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="drawer-user-card mb-3 p-3 rounded-4 d-flex align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2 min-w-0">
+                        <div class="drawer-avatar flex-shrink-0">
+                            <i class="fa-solid fa-user text-dark"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-white fw-bold small text-truncate">@(User.Identity?.Name ?? "My Account")</div>
+                            <div class="text-secondary" style="font-size: 0.72rem;">Verified Seeker</div>
+                        </div>
+                    </div>
+                    <a asp-controller="Wallet" asp-action="Index" class="btn btn-gold btn-sm px-3 flex-shrink-0">
+                        <i class="fa-solid fa-plus me-1"></i>Add ₹
+                    </a>
+                </div>
+            }
+
+            <div class="drawer-section-label">Explore Services</div>
+            <div class="d-flex flex-column gap-1 mb-3">
+                <a class="drawer-nav-item @(IsActive("Home") ? "active" : "")" asp-controller="Home" asp-action="Index">
+                    <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-house"></i></span>
+                    <span class="flex-grow-1">Home</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Astrologer") ? "active" : "")" asp-controller="Astrologer" asp-action="Index">
+                    <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-comments"></i></span>
+                    <span class="flex-grow-1">Talk to Astrologers</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("AiChat") ? "active" : "")" asp-controller="AiChat" asp-action="Index">
+                    <span class="drawer-nav-icon text-info"><i class="fa-solid fa-sparkles"></i></span>
+                    <span class="flex-grow-1">Ask AI Astrologer</span>
+                    <span class="nav-pill-tag tag-gold">AI</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Scans") ? "active" : "")" asp-controller="Scans" asp-action="Index">
+                    <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-hand"></i></span>
+                    <span class="flex-grow-1">Palm &amp; Face Scan</span>
+                    <span class="nav-pill-tag tag-hot">NEW</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Kundli", "Index") || IsActive("Kundli", "Result") ? "active" : "")" asp-controller="Kundli" asp-action="Index">
+                    <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-circle-nodes"></i></span>
+                    <span class="flex-grow-1">Free Janam Kundli</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Kundli", "Matchmaking") || IsActive("Kundli", "MatchmakingResult") ? "active" : "")" asp-controller="Kundli" asp-action="Matchmaking">
+                    <span class="drawer-nav-icon text-danger"><i class="fa-solid fa-heart"></i></span>
+                    <span class="flex-grow-1">Kundli Milan (36 Gunas)</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Horoscope") ? "active" : "")" asp-controller="Horoscope" asp-action="Index">
+                    <span class="drawer-nav-icon text-info"><i class="fa-solid fa-moon"></i></span>
+                    <span class="flex-grow-1">Daily Horoscope</span>
+                </a>
+                <a class="drawer-nav-item @(IsActive("Panchang") ? "active" : "")" asp-controller="Panchang" asp-action="Index">
+                    <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-om"></i></span>
+                    <span class="flex-grow-1">Today's Panchang</span>
+                </a>
+            </div>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="drawer-section-label">My Account</div>
+                <div class="d-flex flex-column gap-1 mb-3">
+                    <a class="drawer-nav-item @(IsActive("Dashboard", "Index") ? "active" : "")" asp-controller="Dashboard" asp-action="Index">
+                        <span class="drawer-nav-icon text-warning"><i class="fa-solid fa-id-card"></i></span>
+                        <span class="flex-grow-1">My Profile</span>
+                    </a>
+                    <a class="drawer-nav-item @(IsActive("Dashboard", "BirthProfiles") ? "active" : "")" asp-controller="Dashboard" asp-action="BirthProfiles">
+                        <span class="drawer-nav-icon text-info"><i class="fa-solid fa-users"></i></span>
+                        <span class="flex-grow-1">Saved Birth Profiles</span>
+                    </a>
+                    <a class="drawer-nav-item @(IsActive("Wallet") ? "active" : "")" asp-controller="Wallet" asp-action="Index">
+                        <span class="drawer-nav-icon text-success"><i class="fa-solid fa-receipt"></i></span>
+                        <span class="flex-grow-1">Wallet &amp; Passbook</span>
+                    </a>
+                </div>
+                <div class="mt-auto pt-3 border-top border-secondary border-opacity-25">
+                    <a class="btn btn-outline-danger w-100 rounded-pill fw-semibold" asp-controller="Auth" asp-action="Logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Sign Out
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="mt-auto pt-3 border-top border-secondary border-opacity-25 d-grid gap-2">
+                    <a asp-controller="Auth" asp-action="Register" class="btn btn-gold fw-bold">
+                        <i class="fa-solid fa-user-plus me-2"></i> Register Free
+                    </a>
+                    <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-gold fw-semibold">
+                        <i class="fa-regular fa-user me-2"></i> Sign In
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main role="main" class="flex-grow-1">
@@ -190,7 +311,7 @@
             <div class="row g-4 mb-4">
                 <div class="col-lg-4 col-md-6">
                     <div class="d-flex align-items-center gap-2 brand-font fw-bold mb-3">
-                        <span class="fs-4 text-warning"><i class="fa-solid fa-sun-plant-wilt"></i></span>
+                        <img src="~/images/cyhastro-logo.png" alt="CYHAstro Logo" class="brand-logo-img" asp-append-version="true" />
                         <span class="fs-4 text-white">CYH<span class="text-warning">Astro</span></span>
                     </div>
                     <p class="small text-secondary mb-3">
@@ -238,11 +359,11 @@
 
             <hr class="border-secondary opacity-25 my-4" />
 
-            <div class="d-flex flex-wrap justify-content-between align-items-center small text-secondary">
+            <div class="d-flex flex-wrap justify-content-center justify-content-md-between align-items-center gap-2 text-center text-md-start small text-secondary">
                 <div>
                     &copy; @DateTime.UtcNow.Year CYHAstro Platform. Built with .NET 10 LTS Enterprise Architecture.
                 </div>
-                <div class="d-flex gap-3">
+                <div class="d-flex flex-wrap justify-content-center gap-3">
                     <a asp-controller="Home" asp-action="Privacy" class="text-secondary text-decoration-none">Privacy Policy</a>
                     <a href="#" class="text-secondary text-decoration-none">Terms of Service</a>
                     <a href="#" class="text-secondary text-decoration-none">Support & FAQs</a>
@@ -350,8 +471,11 @@
                     .then(res => res.ok ? res.json() : null)
                     .then(data => {
                         if (data && data.totalBalance !== undefined) {
+                            const formatted = parseFloat(data.totalBalance).toFixed(2);
                             const elem = document.getElementById("navWalletBalance");
-                            if (elem) elem.innerText = parseFloat(data.totalBalance).toFixed(2);
+                            if (elem) elem.innerText = formatted;
+                            const elemMob = document.getElementById("navWalletBalanceMobile");
+                            if (elemMob) elemMob.innerText = formatted;
                         }
                     })
                     .catch(() => {});
@@ -362,8 +486,11 @@
                         .then(res => res.ok ? res.json() : null)
                         .then(data => {
                             if (data && data.totalBalance !== undefined) {
+                                const formatted = parseFloat(data.totalBalance).toFixed(2);
                                 const elem = document.getElementById("navWalletBalance");
-                                if (elem) elem.innerText = parseFloat(data.totalBalance).toFixed(2);
+                                if (elem) elem.innerText = formatted;
+                                const elemMob = document.getElementById("navWalletBalanceMobile");
+                                if (elemMob) elemMob.innerText = formatted;
                             }
                         })
                         .catch(() => {});
@@ -443,29 +570,32 @@
         </script>
     }
 
-    <!-- Mobile Bottom Navigation Bar (Visible on mobile only: < 768px) -->
-    <nav class="mobile-bottom-nav d-md-none" aria-label="Mobile Bottom Navigation">
-        <a asp-controller="Home" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
-            <i class="fa-solid fa-house"></i>
-            <span>Home</span>
-        </a>
-        <a asp-controller="Astrologer" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Astrologer" ? "active" : "")">
-            <i class="fa-solid fa-comments"></i>
-            <span>Talk</span>
-        </a>
-        <a asp-controller="Horoscope" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Horoscope" ? "active" : "")">
-            <i class="fa-solid fa-moon"></i>
-            <span>Horoscope</span>
-        </a>
-        <a asp-controller="Kundli" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Kundli" ? "active" : "")">
-            <i class="fa-solid fa-circle-nodes"></i>
-            <span>Kundli</span>
-        </a>
-        <a asp-controller="Wallet" asp-action="Index" class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Wallet" ? "active" : "")">
-            <i class="fa-solid fa-wallet"></i>
-            <span>Wallet</span>
-        </a>
-    </nav>
+    @if (!hideMobileBottomNav)
+    {
+        <!-- Mobile Bottom Navigation Bar (Visible on mobile only: < 768px) -->
+        <nav class="mobile-bottom-nav d-md-none" aria-label="Mobile Bottom Navigation">
+            <a asp-controller="Home" asp-action="Index" class="@(currentController == "Home" ? "active" : "")">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </a>
+            <a asp-controller="Astrologer" asp-action="Index" class="@(currentController == "Astrologer" ? "active" : "")">
+                <i class="fa-solid fa-comments"></i>
+                <span>Talk</span>
+            </a>
+            <a asp-controller="AiChat" asp-action="Index" class="@(currentController == "AiChat" ? "active" : "")">
+                <i class="fa-solid fa-sparkles"></i>
+                <span>AI Chat</span>
+            </a>
+            <a asp-controller="Kundli" asp-action="Index" class="@(currentController == "Kundli" ? "active" : "")">
+                <i class="fa-solid fa-circle-nodes"></i>
+                <span>Kundli</span>
+            </a>
+            <a asp-controller="Scans" asp-action="Index" class="@(currentController == "Scans" ? "active" : "")">
+                <i class="fa-solid fa-hand"></i>
+                <span>Scans</span>
+            </a>
+        </nav>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

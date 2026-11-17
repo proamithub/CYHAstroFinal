@@ -6,5 +6,5 @@ public sealed class LiveKitSettings
 
     public string ApiKey { get; set; } = "devkey";
     public string ApiSecret { get; set; } = "secret123456789012345678901234567890";
-    public string LiveKitUrl { get; set; } = "wss://livekit.cyhastro.com";
+    public string LiveKitUrl { get; set; } = "wss://cyhastro-pimmehdb.livekit.cloud";
 }

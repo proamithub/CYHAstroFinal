@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using CYHAstro.Core.Configuration;
 using CYHAstro.Core.DTOs.Consultation;
 using CYHAstro.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace CYHAstro.Web.Areas.Client.Controllers;
 
@@ -13,17 +15,20 @@ public sealed class ConsultationController : Controller
 {
     private readonly IConsultationService _consultationService;
     private readonly IWalletService _walletService;
+    private readonly LiveKitSettings _liveKitSettings;
     private readonly ILogger<ConsultationController> _logger;
     private readonly IHubContext<CYHAstro.Web.Hubs.ConsultationHub> _hubContext;
 
     public ConsultationController(
         IConsultationService consultationService,
         IWalletService walletService,
+        IOptions<LiveKitSettings> liveKitOptions,
         ILogger<ConsultationController> logger,
         IHubContext<CYHAstro.Web.Hubs.ConsultationHub> hubContext)
     {
         _consultationService = consultationService;
         _walletService = walletService;
+        _liveKitSettings = liveKitOptions.Value;
         _logger = logger;
         _hubContext = hubContext;
     }
@@ -46,6 +51,7 @@ public sealed class ConsultationController : Controller
 
         var tokenRes = await _consultationService.GetLiveKitTokenAsync(userId, id, ct);
         ViewBag.LiveKitToken = tokenRes.IsSuccess ? tokenRes.Value : string.Empty;
+        ViewBag.LiveKitUrl = _liveKitSettings.LiveKitUrl;
 
         return View(sessionRes.Value);
     }

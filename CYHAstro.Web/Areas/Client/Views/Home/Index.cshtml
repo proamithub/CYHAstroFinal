@@ -18,10 +18,10 @@
                     Connect instantly with India's top verified astrologers for career clarity, relationship reconciliation, financial growth, and personalized Vedic remedies.
                 </p>
                 <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
-                    <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold btn-lg px-4 py-3 shadow">
+                    <a asp-controller="Astrologer" asp-action="Index" class="btn btn-gold btn-lg px-4 py-3 shadow w-100 w-sm-auto">
                         <i class="fa-solid fa-comments me-2"></i> Consult Astrologer Now
                     </a>
-                    <a asp-controller="Kundli" asp-action="Index" class="btn btn-outline-gold btn-lg px-4 py-3">
+                    <a asp-controller="Kundli" asp-action="Index" class="btn btn-outline-gold btn-lg px-4 py-3 w-100 w-sm-auto">
                         <i class="fa-solid fa-chart-pie me-2"></i> Free Janam Kundli
                     </a>
                 </div>
@@ -133,7 +133,7 @@
 <!-- Top Rated Astrologers Section -->
 <section class="py-5 bg-dark bg-opacity-50">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
             <div>
                 <span class="text-warning small fw-bold text-uppercase letter-spacing-1">Expert Guidance</span>
                 <h3 class="fw-bold text-white brand-font mb-0">Talk to India's Top Astrologers</h3>
@@ -153,9 +153,9 @@
                             <div class="d-flex align-items-start gap-3 mb-3">
                                 <img src="@(string.IsNullOrEmpty(astro.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200" : astro.ProfilePhotoUrl)"
                                      alt="@astro.DisplayName" class="astro-avatar" loading="lazy" width="80" height="80" />
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="fw-bold text-white mb-0">@astro.DisplayName</h6>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1">
+                                        <h6 class="fw-bold text-white mb-0 text-truncate">@astro.DisplayName</h6>
                                         @if (astro.IsAvailable)
                                         {
                                             <span class="badge-online" data-astro-badge="@astro.PublicId"><i class="fa-solid fa-circle me-1" style="font-size: 6px;"></i> Online</span>

@@ -1,0 +1,302 @@
+@{
+    ViewData["Title"] = "हस्तरेखा स्कैन (Palm Scan) - वैदिक विश्लेषण";
+    var settings = ViewBag.Settings as CYHAstro.Core.DTOs.Scans.AstroScanSettingsDto ?? new CYHAstro.Core.DTOs.Scans.AstroScanSettingsDto();
+    var birthProfiles = ViewBag.BirthProfiles as List<CYHAstro.Core.DTOs.User.BirthProfileDto> ?? new List<CYHAstro.Core.DTOs.User.BirthProfileDto>();
+}
+
+<div class="container py-4">
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <span class="badge bg-warning text-dark px-3 py-1 mb-2">
+            <i class="fa-solid fa-hand me-1"></i> वैदिक हस्तरेखा विज्ञान
+        </span>
+        <h2 class="text-white fw-bold brand-font mb-1">अपनी हथेली स्कैन करें (Palm Scan)</h2>
+        <p class="text-secondary small">हथेली को सीधे फ्रेम के अंदर रखें। उंगलियां थोड़ी खुली और प्रकाश पर्याप्त होना चाहिए।</p>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show bg-danger bg-opacity-25 border-danger text-white mx-auto mb-4" style="max-width: 780px;" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>@TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show bg-success bg-opacity-25 border-success text-white mx-auto mb-4" style="max-width: 780px;" role="alert">
+            <i class="fa-solid fa-circle-check me-2 text-success"></i>@TempData["Success"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Scanner Box & Upload Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card bg-dark border-secondary shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-4 p-md-5">
+
+                    <form id="palmScanForm" method="post" asp-action="AnalyzePalm" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+
+                        <!-- Camera / Preview Viewport with SVG Hand Guide -->
+                        <div class="position-relative rounded-4 overflow-hidden mb-4 border border-secondary shadow-inner scan-viewport">
+                            <!-- Video feed for Live Camera -->
+                            <video id="cameraVideo" autoplay playsinline class="w-100 h-100 object-fit-cover d-none"></video>
+
+                            <!-- Image Preview if file chosen -->
+                            <img id="imagePreview" alt="Palm Preview" class="w-100 h-100 object-fit-contain d-none" />
+
+                            <!-- Default Placeholder when camera is off -->
+                            <div id="cameraPlaceholder" class="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-center p-4">
+                                <div class="fs-1 text-warning mb-3 opacity-75">
+                                    <i class="fa-solid fa-hand"></i>
+                                </div>
+                                <h5 class="text-white fw-semibold mb-2">कैमरा शुरू करें या फोटो चुनें</h5>
+                                <p class="text-secondary small mb-3" style="max-width: 360px;">
+                                    लाइव कैमरा खोलने के लिए "कैमरा चालू करें" पर क्लिक करें, या गैलरी से अपनी हथेली की फोटो अपलोड करें।
+                                </p>
+                                <div class="d-flex gap-2 flex-wrap justify-content-center">
+                                    <button type="button" id="btnStartCamera" class="btn btn-warning btn-sm px-3">
+                                        <i class="fa-solid fa-camera me-1"></i> कैमरा चालू करें
+                                    </button>
+                                    <label for="scanPhotoInput" class="btn btn-outline-light btn-sm px-3 mb-0">
+                                        <i class="fa-solid fa-upload me-1"></i> फोटो अपलोड करें
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Transparent SVG Hand Contour Overlay -->
+                            <div id="handGuideOverlay" class="position-absolute top-0 start-0 w-100 h-100 pointer-events-none d-flex align-items-center justify-content-center" style="pointer-events: none; opacity: 0.7;">
+                                <svg width="260" height="320" viewBox="0 0 260 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Palm & Fingers Contour -->
+                                    <path d="M 60 140 C 50 110 55 70 65 50 C 75 30 90 35 95 60 L 98 110 C 98 100 105 40 115 25 C 125 10 140 15 142 50 L 140 110 C 142 90 155 35 165 30 C 175 25 185 35 182 70 L 178 120 C 182 105 195 70 205 65 C 215 60 225 75 218 105 L 205 180 C 200 230 180 280 160 300 L 100 300 C 80 270 65 240 55 210 L 25 180 C 15 170 20 150 35 145 Z" 
+                                          stroke="#ffc107" stroke-width="2.5" stroke-dasharray="6 6" fill="rgba(255, 193, 7, 0.04)" />
+                                    <!-- Center Target Reticle -->
+                                    <circle cx="130" cy="180" r="30" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="4 4" fill="none" />
+                                    <text x="130" y="185" fill="#00e5ff" font-size="11" text-anchor="middle" font-family="sans-serif">हथेली का केंद्र</text>
+                                </svg>
+                            </div>
+
+                            <!-- Animated Scanning Laser Bar (Active during processing) -->
+                            <div id="scanLaserBar" class="position-absolute start-0 w-100 d-none" style="height: 3px; background: linear-gradient(90deg, transparent, #00e5ff, #ffc107, transparent); box-shadow: 0 0 15px #00e5ff; animation: scanAnimation 2s infinite ease-in-out;"></div>
+                        </div>
+
+                        <!-- Real File Input (Hidden, triggered via buttons) -->
+                        <input type="file" id="scanPhotoInput" name="scanPhoto" accept="image/*" class="d-none" />
+
+                        <!-- Camera Action Bar (When camera is running) -->
+                        <div id="cameraControls" class="d-none d-flex flex-wrap justify-content-center justify-content-sm-between align-items-center gap-2 mb-4 p-2 rounded bg-black bg-opacity-40 border border-secondary">
+                            <button type="button" id="btnFlipCamera" class="btn btn-sm btn-outline-secondary text-white">
+                                <i class="fa-solid fa-camera-rotate me-1"></i> कैमरा बदलें
+                            </button>
+                            <button type="button" id="btnCapturePhoto" class="btn btn-warning px-4 fw-bold">
+                                <i class="fa-solid fa-circle-dot me-1"></i> फोटो खींचें
+                            </button>
+                            <button type="button" id="btnStopCamera" class="btn btn-sm btn-outline-danger">
+                                <i class="fa-solid fa-stop me-1"></i> बंद करें
+                            </button>
+                        </div>
+
+                        <!-- Scan Options & Preferences -->
+                        <div class="row g-3 mb-4">
+                            <!-- Hand Selection -->
+                            <div class="col-md-4">
+                                <label class="form-label text-secondary small fw-semibold">हाथ का चयन (Hand)</label>
+                                <select name="handType" class="form-select bg-dark text-white border-secondary">
+                                    <option value="RIGHT" selected>दायाँ हाथ (Right Hand - कर्म/वर्तमान)</option>
+                                    <option value="LEFT">बायाँ हाथ (Left Hand - जन्मजात/प्रारब्ध)</option>
+                                </select>
+                            </div>
+
+                            <!-- Kundli Birth Profile Selector -->
+                            <div class="col-md-5">
+                                <label class="form-label text-secondary small fw-semibold">कुंडली से जोड़ें (Kundli Correlation)</label>
+                                <select name="birthProfileId" class="form-select bg-dark text-white border-secondary">
+                                    <option value="">बिना कुंडली (केवल हस्तरेखा)</option>
+                                    @if (birthProfiles != null && birthProfiles.Any())
+                                    {
+                                        foreach (var profile in birthProfiles)
+                                        {
+                                            <option value="@profile.Id">@profile.Name (@profile.RelationLabel)</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <!-- Language -->
+                            <div class="col-md-3">
+                                <label class="form-label text-secondary small fw-semibold">रिपोर्ट की भाषा</label>
+                                <select name="language" class="form-select bg-dark text-white border-secondary">
+                                    <option value="hi" selected>हिंदी (Hindi)</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Guidelines Alert -->
+                        <div class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 mb-4">
+                            <h6 class="text-warning small fw-bold mb-2"><i class="fa-solid fa-lightbulb me-1"></i>सटीक विश्लेषण के लिए महत्वपूर्ण निर्देश:</h6>
+                            <ul class="text-white-50 small mb-0 ps-3">
+                                <li>हथेली को सीधा रखें और उंगलियों को स्वाभाविक रूप से फैलाएं।</li>
+                                <li>पर्याप्त रोशनी में फोटो लें ताकि रेखाएं (Heart, Head, Life line) स्पष्ट दिखाई दें।</li>
+                                <li>कैमरा हथेली के ठीक ऊपर 90 डिग्री कोण पर रखें ताकि छाया न पड़े।</li>
+                            </ul>
+                        </div>
+
+                        <!-- Submit Button -->
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <button type="submit" id="btnSubmitScan" class="btn btn-warning btn-lg w-100 fw-bold shadow py-3">
+                                <i class="fa-solid fa-sparkles me-2"></i> हस्तरेखा का वैदिक विश्लेषण शुरू करें
+                            </button>
+                        }
+                        else
+                        {
+                            <a href="/Auth/Login?ReturnUrl=%2FScans%2FPalm" class="btn btn-warning btn-lg w-100 fw-bold shadow py-3">
+                                <i class="fa-solid fa-right-to-bracket me-2"></i> लॉगिन करें और हस्तरेखा स्कैन शुरू करें
+                            </a>
+                        }
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Loading State while AI Analyzes -->
+<div class="modal fade" id="analyzingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-warning text-center p-4">
+            <div class="modal-body py-4">
+                <div class="spinner-border text-warning mb-3" style="width: 3.5rem; height: 3.5rem;" role="status">
+                    <span class="visually-hidden">Scanning...</span>
+                </div>
+                <h4 class="text-white fw-bold mb-2">हस्तरेखा का विश्लेषण हो रहा है...</h4>
+                <p class="text-secondary small mb-3">
+                    गूगल जेमिनी विजन AI आपकी हथेली की रेखाओं, पर्वतों और विशेष चिह्नों का अध्ययन कर रहा है। कृपया प्रतीक्षा करें...
+                </p>
+                <div class="progress bg-secondary" style="height: 6px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@@keyframes scanAnimation {
+    0% { top: 0%; opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { top: 96%; opacity: 0; }
+}
+</style>
+
+@section Scripts {
+<script>
+    let stream = null;
+    let facingMode = "environment"; // Rear camera by default on phones
+
+    const video = document.getElementById('cameraVideo');
+    const imagePreview = document.getElementById('imagePreview');
+    const placeholder = document.getElementById('cameraPlaceholder');
+    const controls = document.getElementById('cameraControls');
+    const laser = document.getElementById('scanLaserBar');
+    const fileInput = document.getElementById('scanPhotoInput');
+
+    // Start Camera
+    document.getElementById('btnStartCamera').addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } }
+            });
+            video.srcObject = stream;
+            video.classList.remove('d-none');
+            placeholder.classList.add('d-none');
+            imagePreview.classList.add('d-none');
+            controls.classList.remove('d-none');
+            laser.classList.remove('d-none');
+        } catch (err) {
+            alert('कैमरा शुरू करने में असमर्थ। कृपया कैमरा परमिशन चेक करें या सीधे फोटो अपलोड करें।');
+        }
+    });
+
+    // Flip Camera
+    document.getElementById('btnFlipCamera').addEventListener('click', async () => {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+        }
+        facingMode = facingMode === "environment" ? "user" : "environment";
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode }
+            });
+            video.srcObject = stream;
+        } catch (e) {}
+    });
+
+    // Stop Camera
+    document.getElementById('btnStopCamera').addEventListener('click', () => {
+        stopCamera();
+        placeholder.classList.remove('d-none');
+        video.classList.add('d-none');
+        controls.classList.add('d-none');
+        laser.classList.add('d-none');
+    });
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+    }
+
+    // Capture Photo from Camera
+    document.getElementById('btnCapturePhoto').addEventListener('click', () => {
+        if (!video.videoWidth) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(blob => {
+            const file = new File([blob], "palm_capture.jpg", { type: "image/jpeg" });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+
+            imagePreview.src = URL.createObjectURL(blob);
+            imagePreview.classList.remove('d-none');
+            video.classList.add('d-none');
+            stopCamera();
+            controls.classList.add('d-none');
+        }, 'image/jpeg', 0.95);
+    });
+
+    // Handle Local File Upload
+    fileInput.addEventListener('change', (e) => {
+        if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            stopCamera();
+            video.classList.add('d-none');
+            placeholder.classList.add('d-none');
+            controls.classList.add('d-none');
+            imagePreview.src = URL.createObjectURL(file);
+            imagePreview.classList.remove('d-none');
+        }
+    });
+
+    // Form Submit Loader
+    document.getElementById('palmScanForm').addEventListener('submit', (e) => {
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('कृपया विश्लेषण से पहले अपनी हथेली की फोटो खींचें या अपलोड करें।');
+            return;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('analyzingModal'));
+        modal.show();
+    });
+</script>
+}

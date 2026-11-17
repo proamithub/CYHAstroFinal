@@ -25,4 +25,15 @@ public interface IAiAstrologyService
         string userMessage,
         string language = "en",
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Multimodal vision analysis for Palmistry and Samudrika Shastra reading.
+    /// </summary>
+    Task<Result<string>> AnalyzeVisionAsync(
+        string systemInstruction,
+        string prompt,
+        byte[] imageBytes,
+        string mimeType,
+        string? customModel = null,
+        CancellationToken ct = default);
 }

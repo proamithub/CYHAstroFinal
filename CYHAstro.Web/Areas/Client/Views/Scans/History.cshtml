@@ -1,0 +1,73 @@
+@model List<CYHAstro.Core.DTOs.Scans.AstroScanListItemDto>
+@{
+    ViewData["Title"] = "मेरी स्कैन हिस्ट्री (My Scan History) - CYHAstro";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <div>
+            <h2 class="text-white fw-bold brand-font mb-1"><i class="fa-solid fa-clock-rotate-left text-warning me-2"></i>मेरी स्कैन हिस्ट्री</h2>
+            <p class="text-secondary small mb-0">आपके द्वारा किए गए सभी हस्तरेखा एवं सामुद्रिक मस्तक विश्लेषण</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Palm" class="btn btn-warning btn-sm fw-bold">
+                <i class="fa-solid fa-hand me-1"></i> हथेली स्कैन
+            </a>
+            <a asp-action="Head" class="btn btn-info text-dark btn-sm fw-bold">
+                <i class="fa-solid fa-user-astronaut me-1"></i> मस्तक स्कैन
+            </a>
+        </div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="card bg-dark border-secondary p-5 text-center rounded-4 shadow-sm">
+            <div class="fs-1 text-secondary opacity-50 mb-3"><i class="fa-solid fa-hand-holding-hand"></i></div>
+            <h4 class="text-white fw-bold mb-2">अभी तक कोई स्कैन नहीं किया गया है</h4>
+            <p class="text-secondary small mb-4" style="max-width: 420px; margin: 0 auto;">
+                अपनी हथेली या मस्तक की पहली फोटो खींचें और प्राचीन वैदिक सामुद्रिक शास्त्र के आधार पर सटीक विश्लेषण प्राप्त करें।
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-action="Palm" class="btn btn-warning px-4 fw-bold">हथेली स्कैन करें</a>
+                <a asp-action="Head" class="btn btn-info text-dark px-4 fw-bold">मस्तक स्कैन करें</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var scan in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card bg-dark border-secondary h-100 shadow-sm rounded-4 overflow-hidden hover-scale transition-all">
+                        <div class="position-relative" style="height: 180px; background: #070a0f;">
+                            <img src="@scan.ImageUrl" alt="Scan" class="w-100 h-100 object-fit-contain p-2" onerror="this.src='/images/placeholder_scan.png'" />
+                            <span class="position-absolute top-0 start-0 m-2 badge @(scan.ScanType == "PALM" ? "bg-warning text-dark" : "bg-info text-dark")">
+                                @(scan.ScanType == "PALM" ? "✋ हस्तरेखा" : "👤 सामुद्रिक")
+                            </span>
+                            @if (scan.AuspiciousScore > 0)
+                            {
+                                <span class="position-absolute top-0 end-0 m-2 badge bg-success">
+                                    @scan.AuspiciousScore% शुभ
+                                </span>
+                            }
+                        </div>
+                        <div class="card-body p-4 d-flex flex-column">
+                            <h5 class="text-white fw-bold mb-1 text-truncate">@scan.Title</h5>
+                            <p class="text-secondary small mb-3 text-truncate-3" style="font-size: 0.85rem; line-height: 1.5;">@scan.Summary</p>
+                            
+                            <div class="mt-auto pt-3 border-top border-secondary border-opacity-50 d-flex justify-content-between align-items-center">
+                                <span class="text-muted small" style="font-size: 0.75rem;">
+                                    <i class="fa-solid fa-calendar me-1"></i>@scan.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")
+                                </span>
+                                <a asp-action="Report" asp-route-id="@scan.PublicId" class="btn btn-sm btn-outline-warning">
+                                    पूरी रिपोर्ट <i class="fa-solid fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

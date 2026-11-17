@@ -1,0 +1,171 @@
+@model CYHAstro.Core.DTOs.Scans.AstroScanSettingsDto
+@{
+    ViewData["Title"] = "Scan Settings & Pricing Management";
+}
+
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-warning text-decoration-none">Scans Console</a></li>
+            <li class="breadcrumb-item active text-secondary" aria-current="page">Settings & Pricing</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="text-white fw-bold mb-1"><i class="fa-solid fa-sliders text-warning me-2"></i>Bio-Astro Scan Configuration</h2>
+            <p class="text-secondary small mb-0">Control pricing, wallet deduction, AI models, and prompt engineering for Palm & Head scans.</p>
+        </div>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to Scan Logs
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form method="post" asp-action="UpdateSettings">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-4">
+        <!-- Feature Status & Pricing -->
+        <div class="col-lg-6">
+            <div class="card bg-dark border-secondary h-100 shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                    <span class="text-white fw-bold"><i class="fa-solid fa-toggle-on text-warning me-2"></i>Feature Availability & Monetization</span>
+                </div>
+                <div class="card-body">
+                    <!-- Palm Scan Toggle & Price -->
+                    <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary mb-4">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" asp-for="IsPalmScanEnabled" id="palmSwitch">
+                            <label class="form-check-label text-white fw-semibold" for="palmSwitch">
+                                Enable Palm Scan (हस्तरेखा स्कैन)
+                            </label>
+                            <div class="text-secondary small">Toggle the Palm Scan camera and upload feature on/off across mobile and web.</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label text-secondary small fw-semibold">Palm Scan Price (₹ INR)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-warning">₹</span>
+                                <input type="number" step="0.50" min="0" class="form-control bg-dark text-white border-secondary" asp-for="PalmScanPrice" />
+                            </div>
+                            <div class="text-muted small mt-1">Set 0.00 for 100% free scans, or specify wallet deduction fee.</div>
+                        </div>
+                    </div>
+
+                    <!-- Head Scan Toggle & Price -->
+                    <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary mb-4">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" role="switch" asp-for="IsHeadScanEnabled" id="headSwitch">
+                            <label class="form-check-label text-white fw-semibold" for="headSwitch">
+                                Enable Head / Face Scan (सामुद्रिक मस्तक स्कैन)
+                            </label>
+                            <div class="text-secondary small">Toggle the Forehead and Face reading scan feature on/off.</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label text-secondary small fw-semibold">Head Scan Price (₹ INR)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-warning">₹</span>
+                                <input type="number" step="0.50" min="0" class="form-control bg-dark text-white border-secondary" asp-for="HeadScanPrice" />
+                            </div>
+                            <div class="text-muted small mt-1">Set 0.00 for 100% free scans, or specify wallet deduction fee.</div>
+                        </div>
+                    </div>
+
+                    <!-- Free Scans Policy -->
+                    <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary">
+                        <label class="form-label text-secondary small fw-semibold">Free Scans Allowance Per User</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-info"><i class="fa-solid fa-gift"></i></span>
+                            <input type="number" min="0" max="100" class="form-control bg-dark text-white border-secondary" asp-for="FreeScansPerUser" />
+                        </div>
+                        <div class="text-muted small mt-1">Number of free trial scans granted to every registered seeker before wallet charging starts.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Engine Model & Settings -->
+        <div class="col-lg-6">
+            <div class="card bg-dark border-secondary h-100 shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                    <span class="text-white fw-bold"><i class="fa-solid fa-microchip text-info me-2"></i>AI Vision Engine Configuration</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small fw-semibold">Gemini Vision AI Model</label>
+                        <select asp-for="GeminiModel" class="form-select bg-dark text-white border-secondary">
+                            <option value="gemini-2.0-flash">Google Gemini 2.0 Flash (Recommended - Next-Gen Multimodal Vision)</option>
+                            <option value="gemini-flash-lite-latest">Google Gemini Flash Lite Latest (Ultra Fast & Low Cost)</option>
+                            <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Fast, High Accuracy)</option>
+                            <option value="gemini-1.5-pro">Google Gemini 1.5 Pro (Deep Astrological Complex Analysis)</option>
+                        </select>
+                        <div class="text-secondary small mt-1">Select the multimodal LLM powering the visual line identification.</div>
+                    </div>
+
+                    <div class="p-3 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25 mb-4">
+                        <h6 class="text-warning fw-semibold mb-2"><i class="fa-solid fa-shield-halved me-2"></i>Deterministic Vision Guardrails</h6>
+                        <ul class="text-white small mb-0 ps-3">
+                            <li>All readings follow strict Vedic classical Hastarekha and Samudrika Shastra rules.</li>
+                            <li>If user Kundli is linked, the AI correlates palm lines with planetary Dasha & Lagna.</li>
+                            <li>Gemini Vision outputs structured JSON for dynamic rendering on web and mobile.</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary text-secondary small">
+                        <div class="mb-1"><strong class="text-white">Last Updated:</strong> @Model.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</div>
+                        <div><strong class="text-white">Updated By:</strong> @(Model.UpdatedBy ?? "System")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Prompts Configuration -->
+        <div class="col-12">
+            <div class="card bg-dark border-secondary shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                    <span class="text-white fw-bold"><i class="fa-solid fa-terminal text-warning me-2"></i>Vedic System Prompts Tuning</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <label class="form-label text-warning small fw-bold">
+                                <i class="fa-solid fa-hand me-1"></i> Palmistry (हस्तरेखा) System Prompt
+                            </label>
+                            <textarea asp-for="PalmSystemPrompt" rows="8" class="form-control bg-dark text-white border-secondary font-monospace" style="font-size: 0.85rem;" placeholder="Enter system instructions for Palmistry AI..."></textarea>
+                            <div class="text-muted small mt-1">Instructions given to Gemini Vision when analyzing palm images.</div>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label text-info small fw-bold">
+                                <i class="fa-solid fa-user-astronaut me-1"></i> Samudrika Shastra (मस्तक लक्षण) System Prompt
+                            </label>
+                            <textarea asp-for="HeadSystemPrompt" rows="8" class="form-control bg-dark text-white border-secondary font-monospace" style="font-size: 0.85rem;" placeholder="Enter system instructions for Samudrika Shastra AI..."></textarea>
+                            <div class="text-muted small mt-1">Instructions given to Gemini Vision when analyzing face and forehead images.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-secondary bg-opacity-10 border-secondary text-end p-3">
+                    <button type="submit" class="btn btn-warning px-4 py-2 fw-semibold">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Save All Settings & Prompts
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

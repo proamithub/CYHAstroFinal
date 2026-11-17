@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CYHAstro.Core.Configuration;
 using CYHAstro.Core.DTOs.Consultation;
 using CYHAstro.Core.Interfaces.Repositories;
 using CYHAstro.Core.Interfaces.Services;
@@ -7,6 +8,7 @@ using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
 
 namespace CYHAstro.Web.Areas.Astrologer.Controllers;
 
@@ -17,6 +19,7 @@ public sealed class ConsultationController : Controller
     private readonly IConsultationService _consultationService;
     private readonly IBirthProfileRepository _birthProfileRepo;
     private readonly IDbConnectionFactory _db;
+    private readonly LiveKitSettings _liveKitSettings;
     private readonly ILogger<ConsultationController> _logger;
     private readonly IHubContext<CYHAstro.Web.Hubs.ConsultationHub> _hubContext;
 
@@ -24,12 +27,14 @@ public sealed class ConsultationController : Controller
         IConsultationService consultationService,
         IBirthProfileRepository birthProfileRepo,
         IDbConnectionFactory db,
+        IOptions<LiveKitSettings> liveKitOptions,
         ILogger<ConsultationController> logger,
         IHubContext<CYHAstro.Web.Hubs.ConsultationHub> hubContext)
     {
         _consultationService = consultationService;
         _birthProfileRepo = birthProfileRepo;
         _db = db;
+        _liveKitSettings = liveKitOptions.Value;
         _logger = logger;
         _hubContext = hubContext;
     }
@@ -109,6 +114,7 @@ public sealed class ConsultationController : Controller
         // LiveKit token for Astrologer
         var tokenRes = await _consultationService.GetLiveKitTokenAsync(userId, id, ct);
         ViewBag.LiveKitToken = tokenRes.IsSuccess ? tokenRes.Value : string.Empty;
+        ViewBag.LiveKitUrl = _liveKitSettings.LiveKitUrl;
 
         // Fetch seeker's primary birth profile for instant Kundli view
         var profiles = await _birthProfileRepo.GetByUserIdAsync(session.UserId, ct);

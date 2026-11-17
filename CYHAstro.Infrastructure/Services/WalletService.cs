@@ -141,7 +141,13 @@ public sealed class WalletService : IWalletService
             IdempotencyKey = idempotencyKey
         });
 
-        var razorpayKeyId = _configuration["Razorpay:KeyId"] ?? "rzp_test_placeholder";
+        var razorpayKeyId = _configuration["Razorpay:KeyId"];
+        if (string.IsNullOrWhiteSpace(razorpayKeyId) || razorpayKeyId == "rzp_test_placeholder")
+        {
+            razorpayKeyId = Environment.GetEnvironmentVariable("RAZORPAY_KEY_ID")
+                         ?? Environment.GetEnvironmentVariable("Razorpay__KeyId")
+                         ?? "rzp_test_placeholder";
+        }
 
         var response = new CreateRechargeOrderResponseDto
         {
@@ -194,6 +200,12 @@ public sealed class WalletService : IWalletService
 
         // Verify Razorpay signature if configured
         var razorpaySecret = _configuration["Razorpay:KeySecret"];
+        if (string.IsNullOrWhiteSpace(razorpaySecret) || razorpaySecret == "REPLACE_WITH_RAZORPAY_SECRET")
+        {
+            razorpaySecret = Environment.GetEnvironmentVariable("RAZORPAY_KEY_SECRET")
+                          ?? Environment.GetEnvironmentVariable("Razorpay__KeySecret");
+        }
+
         if (!string.IsNullOrEmpty(razorpaySecret) && razorpaySecret != "REPLACE_WITH_RAZORPAY_SECRET" && !string.IsNullOrEmpty(request.GatewaySignature))
         {
             var payload = $"{request.GatewayOrderId}|{request.GatewayPaymentId}";

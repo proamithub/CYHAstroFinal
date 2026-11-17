@@ -39,6 +39,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IConsultationRepository, ConsultationRepository>();
         services.AddScoped<IAstrologerRepository, CYHAstro.Infrastructure.Data.Repositories.AstrologerRepository>();
         services.AddScoped<IBirthProfileRepository, CYHAstro.Infrastructure.Data.Repositories.BirthProfileRepository>();
+        services.AddScoped<IAstroScanRepository, CYHAstro.Infrastructure.Data.Repositories.AstroScanRepository>();
 
         // --- Redis Distributed Cache ---
         var redisConnectionString = configuration.GetConnectionString("Redis");
@@ -68,8 +69,22 @@ public static class InfrastructureServiceExtensions
         services.AddHttpClient<CYHAstro.Core.Interfaces.Services.IAiAstrologyService, CYHAstro.Infrastructure.Astrology.GeminiAiAstrologyService>();
 
         // --- LiveKit WebRTC Token Service ---
-        services.Configure<CYHAstro.Core.Configuration.LiveKitSettings>(
-            configuration.GetSection(CYHAstro.Core.Configuration.LiveKitSettings.SectionName));
+        services.Configure<CYHAstro.Core.Configuration.LiveKitSettings>(options =>
+        {
+            var section = configuration.GetSection(CYHAstro.Core.Configuration.LiveKitSettings.SectionName);
+            if (!section.Exists())
+            {
+                section = configuration.GetSection("LiveKit");
+            }
+
+            section.Bind(options);
+
+            var explicitUrl = section["LiveKitUrl"] ?? section["Url"] ?? section["ServerUrl"];
+            if (!string.IsNullOrWhiteSpace(explicitUrl))
+            {
+                options.LiveKitUrl = explicitUrl;
+            }
+        });
         services.AddSingleton<CYHAstro.Core.Interfaces.Services.ILiveKitTokenService, CYHAstro.Infrastructure.LiveKit.LiveKitTokenService>();
 
         // --- Core Application Services ---
@@ -84,6 +99,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IMatchmakingPdfService, CYHAstro.Infrastructure.Reports.MatchmakingPdfGenerator>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.IAiChatService, CYHAstro.Infrastructure.Services.AiChatService>();
         services.AddScoped<CYHAstro.Core.Interfaces.Services.INotificationService, CYHAstro.Infrastructure.Services.NotificationService>();
+        services.AddScoped<CYHAstro.Core.Interfaces.Services.IAstroScanService, CYHAstro.Infrastructure.Services.AstroScanService>();
 
         // --- Background Billing Engine ---
         services.AddHostedService<CYHAstro.Infrastructure.BackgroundJobs.ConsultationBillingBackgroundService>();

@@ -1,0 +1,329 @@
+@model CYHAstro.Core.DTOs.Scans.AstroScanDetailDto
+@{
+    ViewData["Title"] = $"Scan Details - {Model.ScanType} #{Model.PublicId.Substring(0, 8)}";
+    var report = Model.Report ?? new CYHAstro.Core.DTOs.Scans.AstroScanReportDto();
+}
+
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index" class="text-warning text-decoration-none">Scans Console</a></li>
+            <li class="breadcrumb-item active text-secondary" aria-current="page">@Model.ScanType Scan Details</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="text-white fw-bold mb-1">
+                @if (Model.ScanType == "PALM")
+                {
+                    <i class="fa-solid fa-hand text-warning me-2"></i>
+                }
+                else
+                {
+                    <i class="fa-solid fa-user-astronaut text-info me-2"></i>
+                }
+                @(report.Title ?? $"{Model.ScanType} Astrological Analysis")
+            </h2>
+            <div class="text-secondary small">
+                Scan ID: <span class="font-monospace text-warning">@Model.PublicId</span> | Captured on @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- Left Column: Image, Seeker Details, Scan Metadata, Astrologer Review -->
+    <div class="col-lg-4">
+        <!-- Captured Image Card -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary d-flex justify-content-between align-items-center">
+                <span class="text-white fw-bold"><i class="fa-solid fa-image text-warning me-2"></i>Captured Image</span>
+                <span class="badge bg-warning text-dark text-uppercase">@Model.ScanType</span>
+            </div>
+            <div class="card-body text-center p-3">
+                <div class="position-relative d-inline-block w-100">
+                    <img src="@Model.ImageUrl" alt="Astro Scan" class="img-fluid rounded border border-secondary shadow w-100" style="max-height: 420px; object-fit: contain; background: #111;" />
+                </div>
+                <div class="mt-3">
+                    <a href="@Model.ImageUrl" target="_blank" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="fa-solid fa-up-right-from-square me-1"></i> Open High-Res Full Image
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seeker Profile Card -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                <span class="text-white fw-bold"><i class="fa-solid fa-user text-info me-2"></i>Seeker Info</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="text-secondary small d-block">Full Name</span>
+                    <span class="text-white fw-semibold">@Model.UserName</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-secondary small d-block">Email</span>
+                    <span class="text-white">@Model.UserEmail</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.UserPhone))
+                {
+                    <div class="mb-2">
+                        <span class="text-secondary small d-block">Phone</span>
+                        <span class="text-white">@Model.UserPhone</span>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(Model.BirthProfileName))
+                {
+                    <div class="mt-3 p-2 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25">
+                        <span class="text-warning small fw-bold d-block"><i class="fa-solid fa-star me-1"></i>Linked Birth Kundli</span>
+                        <span class="text-white small">@Model.BirthProfileName</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Astrologer Manual Verification Card -->
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary d-flex justify-content-between align-items-center">
+                <span class="text-white fw-bold"><i class="fa-solid fa-user-pen text-primary me-2"></i>Astrologer Review</span>
+                @if (Model.IsAdminReviewed)
+                {
+                    <span class="badge bg-success"><i class="fa-solid fa-check me-1"></i>Verified</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning text-dark">Pending</span>
+                }
+            </div>
+            <div class="card-body">
+                <p class="text-secondary small mb-3">Add expert notes, personalized astrological remarks, or gemstone corrections for this seeker.</p>
+                <form method="post" asp-action="AddReviewNotes">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="publicId" value="@Model.PublicId" />
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-semibold">Astrologer / Admin Notes</label>
+                        <textarea name="adminNotes" rows="5" class="form-control bg-dark text-white border-secondary" placeholder="Enter custom observations, remedies, or confirmation...">@Model.AdminNotes</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Save Astrologer Notes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: AI Vedic Astrological Analysis Report -->
+    <div class="col-lg-8">
+        <!-- Overview Banner Card -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                    <div>
+                        <span class="badge bg-warning text-dark px-3 py-2 fs-6">
+                            <i class="fa-solid fa-certificate me-1"></i> @report.HandOrFaceType
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="text-end">
+                            <span class="text-secondary small d-block">Overall Auspicious Score</span>
+                            <span class="text-success fs-4 fw-bold">@report.OverallAuspiciousnessScore%</span>
+                        </div>
+                        <div class="progress" style="width: 100px; height: 10px;">
+                            <div class="progress-bar bg-success" style="width: @report.OverallAuspiciousnessScore%"></div>
+                        </div>
+                    </div>
+                </div>
+                <h5 class="text-warning fw-bold mb-2">सारांश एवं व्यक्तित्व विश्लेषण (Summary)</h5>
+                <p class="text-light leading-relaxed mb-0" style="font-size: 1.05rem; line-height: 1.7;">
+                    @report.OverviewSummary
+                </p>
+            </div>
+        </div>
+
+        <!-- Key Highlights -->
+        @if (report.KeyHighlights != null && report.KeyHighlights.Any())
+        {
+            <div class="card bg-dark border-secondary mb-4 shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                    <span class="text-white fw-bold"><i class="fa-solid fa-bullseye text-warning me-2"></i>प्रमुख योग एवं विशेषताएं (Key Highlights)</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        @foreach (var highlight in report.KeyHighlights)
+                        {
+                            <div class="col-md-6">
+                                <div class="p-2 rounded bg-black bg-opacity-50 border border-secondary border-opacity-50 d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-circle-check text-warning flex-shrink-0"></i>
+                                    <span class="text-white small">@highlight</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Primary Features (Lines / Planetary Marks) -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                <span class="text-white fw-bold"><i class="fa-solid fa-bezier-curve text-info me-2"></i>मुख्य रेखाएं एवं लक्षण (Primary Lines & Features)</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0 align-middle">
+                        <thead class="table-secondary small text-secondary">
+                            <tr>
+                                <th class="ps-3 py-2">लक्षण / रेखा (Feature)</th>
+                                <th>स्थिति (Status)</th>
+                                <th>ताकत (Score)</th>
+                                <th>महत्व व फल (Astrological Interpretation)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (report.PrimaryFeatures != null)
+                            {
+                                foreach (var feat in report.PrimaryFeatures)
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-semibold text-warning">
+                                            @feat.Name
+                                            @if (!string.IsNullOrEmpty(feat.SanskritName))
+                                            {
+                                                <div class="text-muted small">@feat.SanskritName</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(feat.AuspiciousSign))
+                                            {
+                                                <span class="badge bg-success bg-opacity-75 text-white mt-1" style="font-size: 0.65rem;">
+                                                    <i class="fa-solid fa-om me-1"></i>@feat.AuspiciousSign
+                                                </span>
+                                            }
+                                        </td>
+                                        <td><span class="badge bg-secondary text-white">@feat.Status</span></td>
+                                        <td>
+                                            <span class="badge bg-info text-dark">@feat.StrengthScore%</span>
+                                        </td>
+                                        <td>
+                                            <div class="text-light small">@feat.Details</div>
+                                            <div class="text-secondary small mt-1" style="font-size: 0.75rem;">@feat.Significance</div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Life Domains Predictions (Career, Wealth, Health, Marriage) -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                <span class="text-white fw-bold"><i class="fa-solid fa-compass text-warning me-2"></i>जीवन के विभिन्न क्षेत्रों में भविष्यकथन (Domain Forecast)</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @if (report.LifeAspects != null)
+                    {
+                        foreach (var aspect in report.LifeAspects)
+                        {
+                            <div class="col-md-6">
+                                <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="text-warning fw-bold">@aspect.HindiTitle</span>
+                                        <span class="badge bg-success bg-opacity-50 text-white">@aspect.FavorabilityScore% अनुकूल</span>
+                                    </div>
+                                    <p class="text-light small mb-2" style="line-height: 1.6;">@aspect.Prediction</p>
+                                    @if (!string.IsNullOrEmpty(aspect.AuspiciousAgeRange))
+                                    {
+                                        <div class="text-secondary small" style="font-size: 0.75rem;">
+                                            <i class="fa-solid fa-hourglass-half me-1 text-info"></i>शुभ कालखंड: <span class="text-white">@aspect.AuspiciousAgeRange</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Vedic Remedies (वैदिक उपाय) -->
+        <div class="card bg-dark border-secondary mb-4 shadow-sm">
+            <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                <span class="text-white fw-bold"><i class="fa-solid fa-fire-burner text-danger me-2"></i>वैदिक उपाय एवं रत्न परामर्श (Vedic Remedies)</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @if (report.VedicRemedies != null)
+                    {
+                        foreach (var rem in report.VedicRemedies)
+                        {
+                            <div class="col-12">
+                                <div class="p-3 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25">
+                                    <h6 class="text-warning fw-bold mb-1"><i class="fa-solid fa-om me-2"></i>@rem.Title</h6>
+                                    <p class="text-white small mb-2">@rem.Description</p>
+                                    <div class="d-flex flex-wrap gap-2 text-secondary small">
+                                        @if (!string.IsNullOrEmpty(rem.Mantra))
+                                        {
+                                            <span class="badge bg-dark border border-secondary text-warning">
+                                                <i class="fa-solid fa-bell me-1"></i>मंत्र: @rem.Mantra
+                                            </span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(rem.RecommendedGemstone))
+                                        {
+                                            <span class="badge bg-dark border border-secondary text-info">
+                                                <i class="fa-solid fa-gem me-1"></i>रत्न: @rem.RecommendedGemstone
+                                            </span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(rem.DaanDonation))
+                                        {
+                                            <span class="badge bg-dark border border-secondary text-success">
+                                                <i class="fa-solid fa-hand-holding-heart me-1"></i>दान: @rem.DaanDonation
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Kundli Correlation if available -->
+        @if (!string.IsNullOrEmpty(report.KundliCorrelationAnalysis))
+        {
+            <div class="card bg-dark border-secondary mb-4 shadow-sm">
+                <div class="card-header bg-secondary bg-opacity-25 border-secondary">
+                    <span class="text-white fw-bold"><i class="fa-solid fa-chart-pie text-info me-2"></i>जन्म कुंडली समन्वय विश्लेषण (Kundli Synthesis)</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-light small mb-0" style="line-height: 1.7;">
+                        @report.KundliCorrelationAnalysis
+                    </p>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using CYHAstro.Core.Configuration;
 using CYHAstro.Core.DTOs.Consultation;
 using CYHAstro.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CYHAstro.Api.Controllers.v1;
 
@@ -12,11 +14,16 @@ namespace CYHAstro.Api.Controllers.v1;
 public sealed class ConsultationsController : ControllerBase
 {
     private readonly IConsultationService _consultationService;
+    private readonly LiveKitSettings _liveKitSettings;
     private readonly ILogger<ConsultationsController> _logger;
 
-    public ConsultationsController(IConsultationService consultationService, ILogger<ConsultationsController> logger)
+    public ConsultationsController(
+        IConsultationService consultationService,
+        IOptions<LiveKitSettings> liveKitOptions,
+        ILogger<ConsultationsController> logger)
     {
         _consultationService = consultationService;
+        _liveKitSettings = liveKitOptions.Value;
         _logger = logger;
     }
 
@@ -85,7 +92,7 @@ public sealed class ConsultationsController : ControllerBase
 
         var res = await _consultationService.GetLiveKitTokenAsync(userId, publicId, ct);
         return res.Match<IActionResult>(
-            token => Ok(new { token }),
+            token => Ok(new { token, url = _liveKitSettings.LiveKitUrl }),
             err => BadRequest(new { error = err }));
     }
 

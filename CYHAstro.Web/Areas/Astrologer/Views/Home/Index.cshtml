@@ -6,13 +6,13 @@
 <div class="row g-4 mb-4">
     <!-- Astrologer Welcome & Status Hero -->
     <div class="col-12">
-        <div class="cosmic-card p-4 p-md-5 d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div class="d-flex align-items-center gap-4">
+        <div class="cosmic-card p-3 p-md-5 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
                 <img src="@(string.IsNullOrEmpty(Model.ProfilePhotoUrl) ? "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200" : Model.ProfilePhotoUrl)"
-                     alt="@Model.DisplayName" class="rounded-circle border border-warning shadow" style="width: 75px; height: 75px; object-fit: cover;" />
-                <div>
+                     alt="@Model.DisplayName" class="rounded-circle border border-warning shadow flex-shrink-0" style="width: 68px; height: 68px; object-fit: cover;" />
+                <div class="min-w-0">
                     <span class="badge bg-warning text-dark fw-bold mb-1">VERIFIED EXPERT JYOTISH</span>
-                    <h3 class="fw-bold text-white brand-font mb-0">Namaste, @Model.DisplayName</h3>
+                    <h3 class="fw-bold text-white brand-font mb-0 fs-4 fs-md-3">Namaste, @Model.DisplayName</h3>
                     <span class="text-secondary small">
                         Rates: Chat ₹@Model.ChatRatePerMinute/min | Audio ₹@Model.AudioRatePerMinute/min | Video ₹@Model.VideoRatePerMinute/min
                     </span>
@@ -20,10 +20,10 @@
             </div>
 
             <!-- Big Availability Toggle Button -->
-            <div class="d-flex align-items-center gap-3 bg-black bg-opacity-50 p-3 rounded-4 border border-secondary border-opacity-25">
-                <div class="text-end">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 bg-black bg-opacity-50 p-3 rounded-4 border border-secondary border-opacity-25 w-100 w-lg-auto">
+                <div class="text-start text-sm-end">
                     <span class="d-block small text-secondary">Consultation Queue Status</span>
-                    <strong class="fs-5 @(Model.IsAvailable ? "text-success" : "text-danger")" id="heroStatusText">
+                    <strong class="fs-6 fs-md-5 @(Model.IsAvailable ? "text-success" : "text-danger")" id="heroStatusText">
                         @(Model.IsAvailable ? "ONLINE & RECEIVING CALLS" : "OFFLINE")
                     </strong>
                 </div>
@@ -36,46 +36,46 @@
     </div>
 
     <!-- Quick Stats Cards -->
-    <div class="col-md-6 col-xl-3">
-        <div class="cosmic-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="col-6 col-xl-3">
+        <div class="cosmic-card p-3 p-md-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 mb-2">
                 <span class="text-secondary small text-uppercase">Today's Earnings</span>
                 <span class="badge bg-success bg-opacity-25 text-success"><i class="fa-solid fa-indian-rupee-sign"></i> Today</span>
             </div>
-            <h2 class="fw-bold text-white mb-1">₹@Model.TodayEarnings.ToString("F2")</h2>
-            <span class="text-secondary small">Net astrologer take-home</span>
+            <h2 class="fw-bold text-white mb-1 fs-4 fs-md-2">₹@Model.TodayEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">Net take-home</span>
         </div>
     </div>
 
-    <div class="col-md-6 col-xl-3">
-        <div class="cosmic-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="col-6 col-xl-3">
+        <div class="cosmic-card p-3 p-md-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 mb-2">
                 <span class="text-secondary small text-uppercase">Total Earnings</span>
                 <span class="badge bg-warning bg-opacity-25 text-warning"><i class="fa-solid fa-vault"></i> Lifetime</span>
             </div>
-            <h2 class="fw-bold text-warning mb-1">₹@Model.TotalEarnings.ToString("F2")</h2>
-            <span class="text-secondary small">Accrued across all sessions</span>
+            <h2 class="fw-bold text-warning mb-1 fs-4 fs-md-2">₹@Model.TotalEarnings.ToString("F2")</h2>
+            <span class="text-secondary small">All sessions</span>
         </div>
     </div>
 
-    <div class="col-md-6 col-xl-3">
-        <div class="cosmic-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="text-secondary small text-uppercase">Consultations Done</span>
+    <div class="col-6 col-xl-3">
+        <div class="cosmic-card p-3 p-md-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 mb-2">
+                <span class="text-secondary small text-uppercase">Sessions Done</span>
                 <span class="badge bg-info bg-opacity-25 text-info"><i class="fa-solid fa-handshake"></i> Total</span>
             </div>
-            <h2 class="fw-bold text-white mb-1">@Model.TotalConsultations</h2>
-            <span class="text-secondary small">Happy seekers counseled</span>
+            <h2 class="fw-bold text-white mb-1 fs-4 fs-md-2">@Model.TotalConsultations</h2>
+            <span class="text-secondary small">Seekers counseled</span>
         </div>
     </div>
 
-    <div class="col-md-6 col-xl-3">
-        <div class="cosmic-card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-2">
+    <div class="col-6 col-xl-3">
+        <div class="cosmic-card p-3 p-md-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-1 mb-2">
                 <span class="text-secondary small text-uppercase">Client Rating</span>
                 <span class="badge bg-warning text-dark fw-bold"><i class="fa-solid fa-star"></i> Verified</span>
             </div>
-            <h2 class="fw-bold text-warning mb-1">
+            <h2 class="fw-bold text-warning mb-1 fs-4 fs-md-2">
                 @Model.Rating.ToString("F2") <span class="fs-6 text-secondary fw-normal">/ 5.0</span>
             </h2>
             <span class="text-secondary small">Based on reviews</span>
@@ -84,8 +84,8 @@
 </div>
 
 <!-- Incoming Consultation Requests Section -->
-<div class="card cosmic-card p-4 mb-4 border-warning border-opacity-50">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="card cosmic-card p-3 p-md-4 mb-4 border-warning border-opacity-50">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div class="d-flex align-items-center gap-2">
             <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
             <h5 class="fw-bold text-white brand-font mb-0">Incoming Consultation Requests</h5>

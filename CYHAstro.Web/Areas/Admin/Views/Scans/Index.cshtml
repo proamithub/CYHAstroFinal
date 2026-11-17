@@ -1,0 +1,209 @@
+@model CYHAstro.Core.Common.PagedResult<CYHAstro.Core.DTOs.Scans.AstroScanDetailDto>
+@{
+    ViewData["Title"] = "Palm & Head Scan Logs";
+    var scanType = ViewBag.ScanType as string;
+    var search = ViewBag.Search as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-white fw-bold mb-1"><i class="fa-solid fa-hand text-warning me-2"></i>Bio-Astro Scans Console</h2>
+        <p class="text-secondary small mb-0">Monitor, review, and analyze user Palm (Hastarekha) and Head (Samudrika) scans.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Settings" class="btn btn-warning">
+            <i class="fa-solid fa-sliders me-1"></i> Scan Settings & Pricing
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-circle-check me-2"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Filters Bar -->
+<div class="card bg-dark border-secondary mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index" class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label class="form-label text-secondary small fw-semibold">Scan Type</label>
+                <select name="scanType" class="form-select bg-dark text-white border-secondary">
+                    <option value="" selected="@(string.IsNullOrEmpty(scanType))">All Scan Types</option>
+                    <option value="PALM" selected="@(scanType == "PALM")">✋ Palm Scan (हस्तरेखा)</option>
+                    <option value="HEAD" selected="@(scanType == "HEAD")">👤 Head Scan (सामुद्रिक)</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label text-secondary small fw-semibold">Search User / ID</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" name="search" value="@search" class="form-control bg-dark text-white border-secondary" placeholder="Search by name, email, phone, or scan ID..." />
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-filter me-1"></i> Apply Filters</button>
+                <a asp-action="Index" class="btn btn-outline-secondary" title="Reset Filters"><i class="fa-solid fa-rotate-right"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Scans Data Table -->
+<div class="card bg-dark border-secondary">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 align-middle">
+                <thead class="table-secondary text-uppercase small text-secondary">
+                    <tr>
+                        <th class="ps-3 py-3">Scan Type</th>
+                        <th>User</th>
+                        <th>Image Preview</th>
+                        <th>Score</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                        <th>Astrologer Review</th>
+                        <th>Date & Time</th>
+                        <th class="text-end pe-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items == null || !Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-secondary">
+                                <i class="fa-solid fa-hand-holding-dots fs-1 mb-3 d-block text-secondary opacity-50"></i>
+                                No scans found matching your criteria.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    @if (item.ScanType == "PALM")
+                                    {
+                                        <span class="badge bg-warning text-dark px-2 py-1">
+                                            <i class="fa-solid fa-hand me-1"></i> Palm (@(item.HandType ?? "Right"))
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info text-dark px-2 py-1">
+                                            <i class="fa-solid fa-user-astronaut me-1"></i> Head / Face
+                                        </span>
+                                    }
+                                    <div class="text-muted small mt-1 font-monospace" style="font-size: 0.75rem;">@item.PublicId.Substring(0, Math.Min(8, item.PublicId.Length))...</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-white">@item.UserName</div>
+                                    <div class="text-secondary small">@item.UserEmail</div>
+                                    @if (!string.IsNullOrEmpty(item.BirthProfileName))
+                                    {
+                                        <span class="badge bg-secondary text-white-50" style="font-size: 0.7rem;">
+                                            <i class="fa-solid fa-certificate me-1 text-warning"></i>Kundli: @item.BirthProfileName
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="@item.ImageUrl" target="_blank" title="Click to view full image">
+                                        <img src="@item.ImageUrl" alt="Scan" class="rounded border border-secondary" style="width: 50px; height: 50px; object-fit: cover;" onerror="this.src='/images/placeholder_scan.png'" />
+                                    </a>
+                                </td>
+                                <td>
+                                    @if (item.Report?.OverallAuspiciousnessScore > 0)
+                                    {
+                                        <span class="badge bg-success bg-opacity-75 text-white">
+                                            @item.Report.OverallAuspiciousnessScore%
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.CostCharged > 0)
+                                    {
+                                        <span class="text-success fw-bold">₹@item.CostCharged.ToString("F2")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-white">Free</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.Status == "COMPLETED")
+                                    {
+                                        <span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">@item.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.IsAdminReviewed)
+                                    {
+                                        <span class="badge bg-primary"><i class="fa-solid fa-user-check me-1"></i>Reviewed</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary text-secondary-emphasis"><i class="fa-solid fa-clock me-1"></i>Pending Review</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="text-white small">@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</div>
+                                    <div class="text-secondary small" style="font-size: 0.75rem;">@item.CreatedAt.ToLocalTime().ToString("hh:mm tt")</div>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a asp-action="Details" asp-route-id="@item.PublicId" class="btn btn-sm btn-outline-warning">
+                                        <i class="fa-solid fa-eye me-1"></i> View Report
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-dark border-secondary d-flex justify-content-between align-items-center">
+            <div class="text-secondary small">
+                Showing @((Model.Page - 1) * Model.PageSize + 1) to @(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount scans
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                        <a class="page-link bg-dark text-white border-secondary" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-scanType="@scanType" asp-route-search="@search">Previous</a>
+                    </li>
+                    @for (int p = 1; p <= Model.TotalPages; p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link @(p == Model.Page ? "bg-warning text-dark border-warning" : "bg-dark text-white border-secondary")" asp-action="Index" asp-route-page="@p" asp-route-scanType="@scanType" asp-route-search="@search">@p</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                        <a class="page-link bg-dark text-white border-secondary" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-scanType="@scanType" asp-route-search="@search">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

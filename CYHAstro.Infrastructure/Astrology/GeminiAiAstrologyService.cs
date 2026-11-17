@@ -75,19 +75,144 @@ User Message:
         return await CallGeminiAsync(systemInstruction, prompt, ct);
     }
 
-    private async Task<Result<string>> CallGeminiAsync(
+    private string GetEffectiveApiKey()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.ApiKey) &&
+            !_settings.ApiKey.Equals("YOUR_GEMINI_API_KEY_HERE", StringComparison.OrdinalIgnoreCase))
+        {
+            return _settings.ApiKey.Trim();
+        }
+
+        var envKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+                  ?? Environment.GetEnvironmentVariable("GeminiSettings__ApiKey");
+        if (!string.IsNullOrWhiteSpace(envKey) &&
+            !envKey.Equals("YOUR_GEMINI_API_KEY_HERE", StringComparison.OrdinalIgnoreCase))
+        {
+            return envKey.Trim();
+        }
+
+        return string.Empty;
+    }
+
+    public async Task<Result<string>> AnalyzeVisionAsync(
         string systemInstruction,
         string prompt,
-        CancellationToken ct)
+        byte[] imageBytes,
+        string mimeType,
+        string? customModel = null,
+        CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+        var apiKey = GetEffectiveApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
         {
+            _logger.LogWarning("Gemini API key is not configured or is placeholder. Skipping Vision API call.");
             return Result<string>.Failure("Gemini API key is not configured.");
         }
 
         try
         {
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_settings.ModelName}:generateContent?key={_settings.ApiKey}";
+            var primaryModel = !string.IsNullOrWhiteSpace(customModel) ? customModel : _settings.ModelName;
+            var modelsToTry = new List<string> { primaryModel };
+            foreach (var fallback in new[] { "gemini-2.0-flash", "gemini-flash-lite-latest", "gemini-1.5-flash" })
+            {
+                if (!modelsToTry.Contains(fallback, StringComparer.OrdinalIgnoreCase))
+                    modelsToTry.Add(fallback);
+            }
+
+            var base64Data = Convert.ToBase64String(imageBytes);
+
+            var requestBody = new
+            {
+                system_instruction = new
+                {
+                    parts = new[] { new { text = systemInstruction } }
+                },
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new object[]
+                        {
+                            new { text = prompt },
+                            new
+                            {
+                                inline_data = new
+                                {
+                                    mime_type = mimeType,
+                                    data = base64Data
+                                }
+                            }
+                        }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.25,
+                    topK = 32,
+                    topP = 0.9,
+                    maxOutputTokens = 3500,
+                    response_mime_type = "application/json"
+                }
+            };
+
+            string lastError = string.Empty;
+            foreach (var model in modelsToTry)
+            {
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+                var response = await _httpClient.PostAsJsonAsync(url, requestBody, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorText = await response.Content.ReadAsStringAsync(ct);
+                    lastError = $"Gemini Vision API error ({response.StatusCode}) on {model}: {errorText}";
+                    _logger.LogWarning("{Error}", lastError);
+                    if ((int)response.StatusCode == 404 || (int)response.StatusCode == 400)
+                        continue; // Try fallback model
+                    return Result<string>.Failure(lastError);
+                }
+
+                using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("candidates", out var candidates) &&
+                    candidates.GetArrayLength() > 0 &&
+                    candidates[0].TryGetProperty("content", out var content) &&
+                    content.TryGetProperty("parts", out var parts) &&
+                    parts.GetArrayLength() > 0 &&
+                    parts[0].TryGetProperty("text", out var text))
+                {
+                    var resultText = text.GetString();
+                    return Result<string>.Success(resultText ?? string.Empty);
+                }
+            }
+
+            return Result<string>.Failure(string.IsNullOrEmpty(lastError)
+                ? "Gemini Vision API returned an empty or unparseable response."
+                : lastError);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to call Gemini Vision API");
+            return Result<string>.Failure(ex.Message);
+        }
+    }
+
+    private async Task<Result<string>> CallGeminiAsync(
+        string systemInstruction,
+        string prompt,
+        CancellationToken ct)
+    {
+        var apiKey = GetEffectiveApiKey();
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            _logger.LogWarning("Gemini API key is not configured or is placeholder. Using fallback astrological interpretation.");
+            return Result<string>.Failure("Gemini API key is not configured.");
+        }
+
+        try
+        {
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_settings.ModelName}:generateContent?key={apiKey}";
 
             var requestBody = new
             {

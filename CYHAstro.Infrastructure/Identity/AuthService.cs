@@ -225,10 +225,17 @@ public sealed class AuthService : IAuthService
         try
         {
             var googleClientId = _configuration["Google:ClientId"];
+            if (string.IsNullOrWhiteSpace(googleClientId) || googleClientId == "REPLACE_WITH_GOOGLE_CLIENT_ID")
+            {
+                googleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+                              ?? Environment.GetEnvironmentVariable("Google__ClientId")
+                              ?? "63923023387-s975nb1gdal7ovjjn76co4q6qi38l61a.apps.googleusercontent.com";
+            }
+
             var validationSettings = new GoogleJsonWebSignature.ValidationSettings();
             if (!string.IsNullOrEmpty(googleClientId) && googleClientId != "REPLACE_WITH_GOOGLE_CLIENT_ID")
             {
-                validationSettings.Audience = new[] { googleClientId };
+                validationSettings.Audience = new[] { googleClientId.Trim() };
             }
 
             payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, validationSettings);

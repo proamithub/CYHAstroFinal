@@ -35,25 +35,230 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Glassmorphism Navbar */
+/* Glassmorphism Navbar & Unified Header UI */
 .navbar-cosmic {
-    background: rgba(10, 13, 20, 0.85);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border-subtle);
-    transition: all 0.3s ease;
+    background: rgba(10, 13, 20, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+    padding: 0.6rem 0;
+    min-height: 64px;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
-.navbar-cosmic .nav-link {
-    color: var(--text-muted);
+.navbar-cosmic .brand-emblem {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.brand-logo-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid rgba(251, 191, 36, 0.55);
+    filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
+    transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.navbar-brand:hover .brand-logo-img {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.65));
+}
+
+.brand-logo-lg {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(251, 191, 36, 0.6);
+    filter: drop-shadow(0 0 18px rgba(245, 158, 11, 0.45));
+}
+
+@media (max-width: 575px) {
+    .brand-logo-img {
+        width: 34px;
+        height: 34px;
+    }
+}
+
+.navbar-cosmic .brand-title {
+    font-size: 1.25rem;
+    letter-spacing: 0.6px;
+}
+
+.cosmic-desktop-nav .nav-link {
+    color: #cbd5e1;
     font-weight: 500;
-    font-size: 0.95rem;
-    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    padding: 0.45rem 0.72rem !important;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+    line-height: 1.2;
     transition: all 0.2s ease;
 }
 
-.navbar-cosmic .nav-link:hover,
-.navbar-cosmic .nav-link.active {
-    color: var(--gold-primary);
+.cosmic-desktop-nav .nav-link:hover {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.22);
+}
+
+.cosmic-desktop-nav .nav-link.active {
+    color: #fbbf24 !important;
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+    font-weight: 600;
+}
+
+.nav-pill-tag {
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 0.12rem 0.38rem;
+    border-radius: 9999px;
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+.nav-pill-tag.tag-gold {
+    background: #f59e0b;
+    color: #0b0f19;
+}
+.nav-pill-tag.tag-hot {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.header-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    background: rgba(30, 41, 59, 0.65);
+    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.header-icon-btn:hover,
+.header-icon-btn:focus {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.6);
+    color: #fde68a;
+    outline: none;
+}
+
+.header-user-btn {
+    height: 38px;
+    font-size: 0.85rem;
+}
+
+.header-auth-btn {
+    height: 36px;
+    font-size: 0.82rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.cosmic-notif-menu {
+    width: min(340px, calc(100vw - 1.5rem));
+    max-height: 70vh;
+    overflow-y: auto;
+    margin-top: 0.5rem !important;
+    border-radius: 1rem !important;
+}
+
+/* Mobile / Tablet Slide-In Cosmic Offcanvas Drawer */
+.cosmic-offcanvas {
+    width: min(320px, 86vw) !important;
+    background: rgba(11, 15, 25, 0.98) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(245, 158, 11, 0.25) !important;
+    color: #f8fafc;
+}
+
+.drawer-user-card {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(30, 41, 59, 0.7));
+    border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.drawer-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gold-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.drawer-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 0.35rem 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.drawer-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    color: #e2e8f0;
+    font-size: 0.92rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: all 0.18s ease;
+    min-height: 46px;
+}
+
+.drawer-nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fbbf24;
+}
+
+.drawer-nav-item.active {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.38);
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.drawer-nav-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.drawer-nav-item.active .drawer-nav-icon {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.35);
 }
 
 .btn-gold {
@@ -276,39 +481,32 @@ a, button, input, select, textarea, .btn, .nav-link, .zodiac-badge, .dropdown-it
     }
 }
 
-/* 5. Mobile Glassmorphism Navbar Collapse */
-@media (max-width: 991px) {
-    .navbar-collapse {
-        background: rgba(10, 13, 20, 0.98);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(245, 158, 11, 0.25);
-        border-radius: 1rem;
-        padding: 1.25rem;
-        margin-top: 0.75rem;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+/* 5. Compact Mobile Header & Wallet Pill */
+@media (max-width: 575px) {
+    .navbar-cosmic {
+        padding: 0.45rem 0;
+        min-height: 58px;
     }
-    .navbar-cosmic .nav-link {
-        padding: 0.75rem 1rem;
-        border-radius: 0.5rem;
+    .navbar-cosmic .brand-emblem {
+        font-size: 1.15rem;
     }
-    .navbar-cosmic .nav-link:hover, .navbar-cosmic .nav-link.active {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--gold-primary);
+    .navbar-cosmic .brand-title {
+        font-size: 1.1rem;
     }
-    .navbar-collapse .d-flex.align-items-center.gap-3 {
-        flex-direction: column;
-        align-items: stretch !important;
-        gap: 0.75rem !important;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    .wallet-pill {
+        padding: 0.3rem 0.65rem;
+        font-size: 0.78rem;
+        gap: 0.3rem;
     }
-    .navbar-collapse .d-flex.align-items-center.gap-3 .wallet-pill,
-    .navbar-collapse .d-flex.align-items-center.gap-3 .btn {
-        width: 100%;
-        text-align: center;
-        justify-content: center;
+    .header-icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 0.92rem;
+    }
+    .header-auth-btn {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        min-height: 36px !important;
     }
 }
 
@@ -382,13 +580,14 @@ a, button, input, select, textarea, .btn, .nav-link, .zodiac-badge, .dropdown-it
     }
 }
 
-/* 8. Mobile Bottom Navigation Bar (Sticky Thumb-Accessible) */
+/* 8. Mobile Bottom Navigation Bar (Sticky Thumb-Accessible with Safe Area) */
 .mobile-bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    min-height: 60px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: rgba(10, 13, 20, 0.96);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -405,12 +604,14 @@ a, button, input, select, textarea, .btn, .nav-link, .zodiac-badge, .dropdown-it
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 500;
     text-decoration: none;
-    padding: 0.25rem 0.5rem;
+    padding: 0.35rem 0.25rem;
     transition: color 0.2s ease;
     flex: 1;
+    min-width: 0;
+    white-space: nowrap;
 }
 .mobile-bottom-nav a i {
     font-size: 1.15rem;
@@ -424,23 +625,159 @@ a, button, input, select, textarea, .btn, .nav-link, .zodiac-badge, .dropdown-it
     color: var(--gold-primary);
 }
 @media (max-width: 767px) {
-    body {
-        padding-bottom: 65px;
+    body.has-mobile-nav {
+        padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    }
+    body:not(.no-mobile-nav) {
+        padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
     }
 }
 
-/* 9. Responsive Headings & Hero Spacing */
+/* 9. Responsive Headings, Hero, Cards, Dropdowns & Touch Polish */
+@media (hover: none) {
+    .cosmic-card:hover {
+        transform: none;
+    }
+}
+
+.dropdown-menu {
+    max-width: calc(100vw - 1.5rem);
+}
+
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+}
+
+.nav-pills-cosmic {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.nav-pills-cosmic::-webkit-scrollbar {
+    display: none;
+}
+.nav-pills-cosmic .nav-link {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* AI Chat Responsive Container */
+.aichat-wrapper {
+    max-width: 1400px;
+    min-height: 85vh;
+}
+.aichat-row {
+    height: 82vh;
+}
+.aichat-bubble {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Consultation Chat Responsive Card */
+.consultation-chat-card {
+    height: 580px;
+}
+.consultation-chat-card.astro-chat-card {
+    height: 600px;
+}
+
+/* Scan Viewport Responsive */
+.scan-viewport {
+    height: 380px;
+    background: #070a0f;
+}
+.scan-viewport svg {
+    max-width: 78%;
+    max-height: 88%;
+    height: auto;
+}
+
+/* Responsive width helpers (Bootstrap 5 extension) */
+@media (min-width: 576px) {
+    .w-sm-auto { width: auto !important; }
+}
+@media (min-width: 768px) {
+    .w-md-auto { width: auto !important; }
+}
+@media (min-width: 992px) {
+    .w-lg-auto { width: auto !important; }
+}
+
+/* Mobile-only Responsive Overrides */
+@media (max-width: 991px) {
+    main .sticky-top {
+        position: static !important;
+        top: auto !important;
+    }
+}
+
 @media (max-width: 767px) {
     .display-4 {
-        font-size: 2rem !important;
+        font-size: 1.9rem !important;
         line-height: 1.25 !important;
     }
     .display-5 {
-        font-size: 1.7rem !important;
+        font-size: 1.6rem !important;
         line-height: 1.25 !important;
     }
+    .display-6 {
+        font-size: 1.45rem !important;
+        line-height: 1.3 !important;
+    }
     .hero-gradient {
-        padding: 2rem 0 1.5rem 0 !important;
+        padding: 1.75rem 0 1.25rem 0 !important;
+    }
+    .aichat-wrapper {
+        min-height: auto;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .aichat-row {
+        height: calc(100dvh - 142px);
+        min-height: 440px;
+    }
+    .consultation-chat-card,
+    .consultation-chat-card.astro-chat-card {
+        height: 62dvh !important;
+        min-height: 360px;
+        max-height: 520px;
+    }
+    .toast-container {
+        bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+        left: 0.5rem !important;
+        right: 0.5rem !important;
+        max-width: calc(100vw - 1rem);
+    }
+    .toast-container .toast {
+        width: 100%;
+    }
+    .footer-cosmic {
+        padding: 2rem 0 1.25rem 0;
+    }
+}
+
+@media (max-width: 575px) {
+    .astro-avatar {
+        width: 64px;
+        height: 64px;
+    }
+    .zodiac-badge {
+        width: 76px;
+        height: 76px;
+    }
+    .kundli-chart-wrapper {
+        padding: 0.65rem;
+    }
+    .scan-viewport {
+        height: 300px;
+    }
+    .btn-lg {
+        font-size: 0.98rem;
+        padding: 0.65rem 1.1rem !important;
+    }
+    .card-body.p-4,
+    .cosmic-card.p-4 {
+        padding: 1.15rem !important;
     }
 }
 

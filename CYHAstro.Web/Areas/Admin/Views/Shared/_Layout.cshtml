@@ -3,8 +3,10 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta name="theme-color" content="#0b0e1b" />
     <title>@ViewData["Title"] - CYHAstro Admin Console</title>
+    <link rel="icon" type="image/png" href="~/images/cyhastro-favicon.png" asp-append-version="true" />
 
     <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -16,14 +18,22 @@
 <body>
     @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Admin"))
     {
+        <!-- Mobile Backdrop Overlay -->
+        <div class="admin-sidebar-backdrop" id="adminSidebarBackdrop" onclick="closeAdminSidebar()"></div>
+
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar" id="adminSidebar">
-            <div class="sidebar-brand">
-                <span class="text-warning fs-4"><i class="fa-solid fa-shield-halved"></i></span>
-                <div>
-                    <span class="text-white fw-bold">CYH<span class="text-warning">Astro</span></span>
-                    <span class="badge bg-danger ms-1 text-uppercase" style="font-size: 0.65rem;">Admin</span>
+            <div class="sidebar-brand justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="~/images/cyhastro-logo.png" alt="CYHAstro Logo" style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1.5px solid rgba(251, 191, 36, 0.55);" asp-append-version="true" />
+                    <div>
+                        <span class="text-white fw-bold">CYH<span class="text-warning">Astro</span></span>
+                        <span class="badge bg-danger ms-1 text-uppercase" style="font-size: 0.65rem;">Admin</span>
+                    </div>
                 </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none border-0 text-light" onclick="closeAdminSidebar()" aria-label="Close Menu">
+                    <i class="fa-solid fa-xmark fs-5"></i>
+                </button>
             </div>
 
             <div class="sidebar-nav">
@@ -57,6 +67,13 @@
                    asp-controller="Consultations" asp-action="Index">
                     <i class="fa-solid fa-headset text-info"></i>
                     <span>Consultation Logs</span>
+                </a>
+
+                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Scans" ? "active" : "")"
+                   asp-controller="Scans" asp-action="Index">
+                    <i class="fa-solid fa-hand text-warning"></i>
+                    <span>Bio-Astro Scans</span>
+                    <span class="badge bg-danger ms-auto" style="font-size: 0.6rem;">AI</span>
                 </a>
 
                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Packages" ? "active" : "")"
@@ -109,18 +126,18 @@
         <div class="admin-main">
             <!-- Topbar -->
             <header class="admin-topbar">
-                <div class="d-flex align-items-center gap-3">
-                    <button class="btn btn-outline-secondary d-lg-none" type="button" onclick="document.getElementById('adminSidebar').classList.toggle('show')">
+                <div class="d-flex align-items-center gap-2 gap-md-3 min-w-0">
+                    <button class="btn btn-outline-secondary btn-sm d-lg-none flex-shrink-0" type="button" onclick="toggleAdminSidebar()" aria-label="Open Menu">
                         <i class="fa-solid fa-bars"></i>
                     </button>
-                    <h5 class="mb-0 text-white fw-bold">@ViewData["Title"]</h5>
+                    <h5 class="mb-0 text-white fw-bold text-truncate">@ViewData["Title"]</h5>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-2">
+                <div class="d-flex align-items-center gap-2 gap-md-3 flex-shrink-0">
+                    <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 px-md-3 py-2 d-none d-md-inline-flex align-items-center">
                         <i class="fa-solid fa-circle me-1" style="font-size: 8px;"></i> LiveKit & Redis Ready
                     </span>
-                    <a asp-controller="Auth" asp-action="Logout" class="btn btn-sm btn-outline-danger">
-                        <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Sign Out
+                    <a asp-controller="Auth" asp-action="Logout" class="btn btn-sm btn-outline-danger" title="Sign Out">
+                        <i class="fa-solid fa-arrow-right-from-bracket me-sm-1"></i><span class="d-none d-sm-inline">Sign Out</span>
                     </a>
                 </div>
             </header>
@@ -161,6 +178,26 @@
 
     <!-- Bootstrap 5.3 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleAdminSidebar() {
+            const sb = document.getElementById('adminSidebar');
+            const bd = document.getElementById('adminSidebarBackdrop');
+            if (!sb || !bd) return;
+            sb.classList.toggle('show');
+            bd.classList.toggle('show');
+        }
+        function closeAdminSidebar() {
+            document.getElementById('adminSidebar')?.classList.remove('show');
+            document.getElementById('adminSidebarBackdrop')?.classList.remove('show');
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('#adminSidebar .nav-link').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    if (window.innerWidth < 992) closeAdminSidebar();
+                });
+            });
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

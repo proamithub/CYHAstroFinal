@@ -1,6 +1,12 @@
 @model CYHAstro.Core.DTOs.Auth.LoginRequestDto
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     ViewData["Title"] = "Sign In";
+    var googleClientId = Configuration["Google:ClientId"];
+    if (string.IsNullOrWhiteSpace(googleClientId) || googleClientId == "REPLACE_WITH_GOOGLE_CLIENT_ID")
+    {
+        googleClientId = "63923023387-s975nb1gdal7ovjjn76co4q6qi38l61a.apps.googleusercontent.com";
+    }
 }
 
 <div class="container py-5">
@@ -8,8 +14,8 @@
         <div class="col-md-6 col-lg-5">
             <div class="cosmic-card p-4 p-sm-5">
                 <div class="text-center mb-4">
-                    <span class="fs-1 text-warning"><i class="fa-solid fa-sun-plant-wilt"></i></span>
-                    <h3 class="fw-bold text-white mt-2">Welcome Back</h3>
+                    <img src="~/images/cyhastro-logo.png" alt="CYHAstro Logo" class="brand-logo-lg mb-2" asp-append-version="true" />
+                    <h3 class="fw-bold text-white mt-1">Welcome Back</h3>
                     <p class="text-secondary small">Access your daily Vedic predictions and astrologer consultations</p>
                 </div>
 
@@ -102,7 +108,7 @@
             function setupGoogle() {
                 if (window.google && google.accounts && google.accounts.id) {
                     google.accounts.id.initialize({
-                        client_id: '63923023387-s975nb1gdal7ovjjn76co4q6qi38l61a.apps.googleusercontent.com',
+                        client_id: '@googleClientId',
                         callback: handleGoogleResponse,
                         auto_select: false
                     });

@@ -42,8 +42,8 @@
             </div>
 
             <!-- End Call Action -->
-            <div>
-                <button type="button" class="btn btn-danger fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#endAstroSessionModal">
+            <div class="w-100 w-sm-auto">
+                <button type="button" class="btn btn-danger fw-bold px-4 py-2 w-100 w-sm-auto" data-bs-toggle="modal" data-bs-target="#endAstroSessionModal">
                     <i class="fa-solid fa-phone-slash me-1"></i> End Consultation
                 </button>
             </div>
@@ -82,7 +82,7 @@
                     </div>
 
                     <!-- Media Controls -->
-                    <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+                    <div class="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-sm-3 mt-3">
                         <button class="btn btn-outline-light rounded-circle p-3" id="micToggleBtn" title="Mute/Unmute Mic" onclick="toggleAudio()">
                             <i class="fa-solid fa-microphone fs-5"></i>
                         </button>
@@ -185,7 +185,7 @@
 
         <!-- Chat Stream & Astrologer Notes Section -->
         <div class="@(isMedia ? "col-lg-5" : "col-lg-6")">
-            <div class="card cosmic-card p-3 d-flex flex-column" style="height: 600px;">
+            <div class="card cosmic-card p-3 d-flex flex-column consultation-chat-card astro-chat-card">
                 <div class="card-header bg-transparent border-0 pb-2 border-bottom border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
                     <span class="text-white fw-bold"><i class="fa-solid fa-comments text-warning me-2"></i>Live Consultation Chat</span>
                     <span class="badge bg-dark border border-secondary text-secondary small" id="astroConnectionStatus">Connecting...</span>
